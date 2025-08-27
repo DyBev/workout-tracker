@@ -28,20 +28,20 @@ b. I want users to be able to experience the app before needing to pay so will n
 a. allow trainers to share created workouts with their clients without clients needing to create their own workout.
 b. allow clients to share their completed workouts with their trainers meaning trainers can see the progress of their client over the long term allowing them to adjust the training schedule based on the progress of their client.
 
-# Architecture (TODO mermaid diagram)
-temp diagram for commit
+# Architecture Diagram
 ```mermaid
 architecture-beta
     group api(cloud)[API]
 
     service db(database)[Database] in api
-    service disk1(disk)[Storage] in api
-    service disk2(disk)[Storage] in api
-    service server(server)[Server] in api
+    service server(server)[Pocketbase] in api
 
     db:L -- R:server
-    disk1:T -- B:server
-    disk2:T -- B:db
+
+    service client(internet)[CLIENT]
+
+    client:R --> L:server
+    server:L --> R:client
 ```
 
 
