@@ -30,6 +30,44 @@ a. allow trainers to share created workouts with their clients without clients n
 b. allow clients to share their completed workouts with their trainers meaning trainers can see the progress of their client over the long term allowing them to adjust the training schedule based on the progress of their client.
 c. Note: cross-user queries (e.g. a trainer viewing all of a client's workouts) will be easier to implement after migrating to a relational database where joins and secondary indexes are more natural.
 
+### Sharing design within DynamoDB
+
+Two approaches are viable without leaving DynamoDB:
+
+**Option A — Copy-on-share (simplest)**
+
+When a trainer shares a template with a client, Lambda writes a copy of the template item directly into the client's own `SavedTemplates` partition (`PK=clientUserId`). The client's existing read path requires no changes — their templates all live under their own `userId` as normal.
+
+- ✅ Zero extra tables or GSIs
+- ✅ No change to existing read paths
+- ❌ Template changes made by the trainer after sharing do not propagate to clients (snapshot-in-time)
+
+Suitable for simple one-way "push a template to a client" flows where the trainer doesn't need to keep templates in sync.
+
+**Option B — SharedTemplates table with a GSI (live sharing)**
+
+Add a fourth table `SharedTemplates` that acts as a sharing ledger:
+
+| Table | PK | SK | GSI PK | GSI SK |
+|---|---|---|---|---|
+| `SharedTemplates` | `ownerId` | `SHARE#<recipientId>#<templateId>` | `recipientId` | `TEMPLATE#<templateId>` |
+
+The SK is ordered `SHARE#<recipientId>#<templateId>` so that a trainer can query `PK=ownerId, SK begins_with SHARE#<recipientId>` to list everything shared with a specific client in one range query, which is expected to be a common access pattern for trainer management UIs.
+
+- **Owner query** (`PK=ownerId`) — a trainer can fetch all templates they have shared and see which clients received each one.
+- **Recipient query** (GSI: `PK=recipientId`) — a client can fetch all templates shared with them in a single query without scanning the whole table.
+- The item stores a reference to the original `SavedTemplates` entry (`ownerId` + `templateId`), so Lambda fetches the live template in a second read, meaning updates made by the trainer are always reflected. When loading a client's full template list, Lambda can resolve multiple references in parallel using `BatchGetItem` to avoid N serial reads.
+
+A similar pattern works for clients sharing completed workouts with their trainer:
+
+| Table | PK | SK | GSI PK | GSI SK |
+|---|---|---|---|---|
+| `SharedWorkouts` | `clientId` | `SHARE#<trainerId>#<workoutId>` | `trainerId` | `WORKOUT#<workoutId>` |
+
+The trainer queries the GSI (`PK=trainerId`) to pull all workouts shared with them across all clients, and uses `BatchGetItem` against the `Workouts` table to resolve the full workout items.
+
+**Relationship management** — a `TrainerClients` table (or a `relationships` attribute on `UserProfiles`) can record which trainer–client pairs exist, so Lambda can enforce that sharing is only permitted between linked users before writing to `SharedTemplates`.
+
 # Architecture Diagram
 ```mermaid
 architecture-beta
