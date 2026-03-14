@@ -12,6 +12,7 @@ import { FormInput, Button, FormError } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthForm } from '../hooks/useAuthForm';
 import type { AuthStackParamList } from '../types/auth';
+import { colors } from '../constants/colors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ConfirmSignUp'>;
 
@@ -154,17 +155,17 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.primary.greyDarkest,
     marginBottom: 32,
     textAlign: 'center',
     lineHeight: 22,
   },
   emailText: {
     fontWeight: '600',
-    color: '#111827',
+    color: colors.primary.black,
   },
   successMessage: {
-    color: '#059669',
+    color: colors.primary.green,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
