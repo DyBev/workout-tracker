@@ -37,3 +37,9 @@ export async function deleteWorkoutFromHistory(
   const updated = history.filter((w) => w.workoutId !== workoutId);
   await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
 }
+
+export async function saveWorkoutHistory(
+  workouts: Workout[],
+): Promise<void> {
+  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(workouts));
+}

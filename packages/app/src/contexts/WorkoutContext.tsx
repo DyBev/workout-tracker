@@ -7,6 +7,7 @@ import React, {
   useReducer,
 } from 'react';
 import * as workoutStorage from '../services/workoutStorage';
+import * as workoutApi from '../services/workoutApi';
 import { useAuth } from './AuthContext';
 import type {
   BodyWeight,
@@ -31,6 +32,7 @@ const initialState: WorkoutState = {
   activeWorkout: null,
   history: [],
   isLoading: true,
+  failedSyncIds: new Set(),
 };
 
 function workoutReducer(
@@ -56,6 +58,25 @@ function workoutReducer(
       return { ...state, history: action.workouts, isLoading: false };
     case 'RESTORE_ACTIVE_WORKOUT':
       return { ...state, activeWorkout: action.workout };
+    case 'MARK_SYNCED':
+      return {
+        ...state,
+        history: state.history.map((w) =>
+          action.workoutIds.includes(w.workoutId)
+            ? { ...w, syncStatus: 'synced' as const }
+            : w,
+        ),
+      };
+    case 'MARK_SYNC_FAILED': {
+      const nextFailed = new Set(state.failedSyncIds);
+      for (const id of action.workoutIds) {
+        nextFailed.add(id);
+      }
+      return {
+        ...state,
+        failedSyncIds: nextFailed,
+      };
+    }
     default:
       return state;
   }
@@ -97,6 +118,12 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     }
   }, [state.activeWorkout]);
 
+  useEffect(() => {
+    if (!state.isLoading) {
+      syncWorkouts();
+    }
+  }, [state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const startWorkout = useCallback(() => {
     const now = new Date().toISOString();
     const workoutId = generateId();
@@ -115,6 +142,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       exercises: [],
       createdAt: now,
       updatedAt: now,
+      syncStatus: 'pending',
     };
 
     dispatch({ type: 'START_WORKOUT', workout });
@@ -242,6 +270,36 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     [updateActiveWorkout],
   );
 
+  const syncWorkouts = useCallback(
+    async (workouts?: Workout[]) => {
+      const toSync =
+        workouts ??
+        state.history.filter(
+          (w) =>
+            w.syncStatus !== 'synced' &&
+            !state.failedSyncIds.has(w.workoutId),
+        );
+
+      if (toSync.length === 0) return;
+
+      const payload = toSync.length === 1 ? toSync[0] : toSync;
+      const result = await workoutApi.saveWorkouts(payload);
+
+      const ids = toSync.map((w) => w.workoutId);
+
+      if (result.success) {
+        dispatch({ type: 'MARK_SYNCED', workoutIds: ids });
+        const updatedHistory = state.history.map((w) =>
+          ids.includes(w.workoutId) ? { ...w, syncStatus: 'synced' as const } : w,
+        );
+        await workoutStorage.saveWorkoutHistory(updatedHistory);
+      } else {
+        dispatch({ type: 'MARK_SYNC_FAILED', workoutIds: ids });
+      }
+    },
+    [state.history, state.failedSyncIds],
+  );
+
   const completeWorkout = useCallback(async () => {
     if (!state.activeWorkout) return;
 
@@ -250,17 +308,20 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       ...state.activeWorkout,
       completedAt: now,
       updatedAt: now,
+      syncStatus: 'pending',
     };
 
     await workoutStorage.saveWorkoutToHistory(completed);
     await workoutStorage.clearActiveWorkout();
     dispatch({ type: 'COMPLETE_WORKOUT', workout: completed });
-  }, [state.activeWorkout]);
+
+    syncWorkouts([completed]).catch(() => {});
+  }, [state.activeWorkout, syncWorkouts]);
 
   const discardWorkout = useCallback(async () => {
     await workoutStorage.clearActiveWorkout();
     dispatch({ type: 'DISCARD_WORKOUT' });
-    navigation.navigate('Home');
+    navigation.navigate('Home' as never);
   }, [navigation]);
 
   const loadHistory = useCallback(async () => {
@@ -283,6 +344,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       completeWorkout,
       discardWorkout,
       loadHistory,
+      syncWorkouts,
     }),
     [
       state,
@@ -298,6 +360,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       completeWorkout,
       discardWorkout,
       loadHistory,
+      syncWorkouts,
     ],
   );
 

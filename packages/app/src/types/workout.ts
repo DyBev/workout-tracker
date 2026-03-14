@@ -20,6 +20,8 @@ export interface BodyWeight {
   unit: 'kg' | 'lbs';
 }
 
+export type SyncStatus = 'pending' | 'synced';
+
 export interface Workout {
   userId: string;
   sk: string;
@@ -33,6 +35,7 @@ export interface Workout {
   exercises: WorkoutExercise[];
   createdAt: string;
   updatedAt: string;
+  syncStatus: SyncStatus;
 }
 
 export type AppStackParamList = {
@@ -61,6 +64,7 @@ export interface WorkoutState {
   activeWorkout: Workout | null;
   history: Workout[];
   isLoading: boolean;
+  failedSyncIds: Set<string>;
 }
 
 export type WorkoutAction =
@@ -70,7 +74,9 @@ export type WorkoutAction =
   | { type: 'COMPLETE_WORKOUT'; workout: Workout }
   | { type: 'DISCARD_WORKOUT' }
   | { type: 'LOAD_HISTORY'; workouts: Workout[] }
-  | { type: 'RESTORE_ACTIVE_WORKOUT'; workout: Workout };
+  | { type: 'RESTORE_ACTIVE_WORKOUT'; workout: Workout }
+  | { type: 'MARK_SYNCED'; workoutIds: string[] }
+  | { type: 'MARK_SYNC_FAILED'; workoutIds: string[] };
 
 export interface WorkoutContextValue {
   state: WorkoutState;
@@ -91,4 +97,5 @@ export interface WorkoutContextValue {
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   loadHistory: () => Promise<void>;
+  syncWorkouts: (workouts?: Workout[]) => Promise<void>;
 }
