@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { colors } from '../constants/colors';
 
 export interface LoadingOverlayProps {
   visible: boolean;
@@ -28,7 +29,7 @@ export function LoadingOverlay({ visible, message }: LoadingOverlayProps) {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -41,6 +42,6 @@ const styles = StyleSheet.create({
   message: {
     marginTop: 12,
     fontSize: 16,
-    color: '#374151',
+    color: colors.primary.greyDarkest,
   },
 });
