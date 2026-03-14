@@ -9,6 +9,7 @@ import {
   type TextInputProps,
   Platform,
 } from 'react-native';
+import { colors } from '../constants/colors';
 
 export interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
   label: string;
@@ -108,17 +109,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   required: {
-    color: '#dc2626',
+    color: colors.primary.red,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: colors.primary.greyLight,
     borderRadius: 8,
   },
   inputError: {
-    borderColor: '#dc2626',
+    borderColor: colors.primary.red,
   },
   input: {
     flex: 1,
@@ -131,12 +132,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   toggleText: {
-    color: '#6b7280',
+    color: colors.primary.greyLight,
     fontSize: 14,
     fontWeight: '500',
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.primary.red,
     fontSize: 12,
     marginTop: 4,
   },
