@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, StyleSheet, type ViewStyle } from 'react-native';
+import { colors } from '../constants/colors';
 
 export interface FormErrorProps {
   message: string | null | undefined;
@@ -24,8 +25,8 @@ export function FormError({ message, style }: FormErrorProps) {
 
 const styles = StyleSheet.create({
   error: {
-    color: '#dc2626',
-    fontSize: 14,
+    color: colors.primary.red,
+    fontSize: 16,
     textAlign: 'center',
     marginBottom: 16,
     paddingHorizontal: 16,
