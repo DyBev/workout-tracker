@@ -282,8 +282,6 @@ function ExerciseCard({
   );
 }
 
-// ── Main screen ──────────────────────────────────────────────────────────────
-
 export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   const {
     state,
@@ -349,7 +347,6 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title} accessibilityRole="header">
@@ -367,7 +364,6 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
         </Pressable>
       </View>
 
-      {/* Scrollable content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -376,7 +372,6 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Notes */}
         <TextInput
           style={[
             styles.notesInput,
@@ -390,10 +385,8 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
           accessibilityLabel="Workout notes"
         />
 
-        {/* Tags */}
         <TagInput tags={workout.tags} onUpdateTags={updateTags} />
 
-        {/* Exercises */}
         {workout.exercises.map((exercise) => (
           <ExerciseCard
             key={exercise.exerciseId}
@@ -405,11 +398,9 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
           />
         ))}
 
-        {/* Add exercise */}
         <AddExerciseRow onAdd={addExercise} />
       </ScrollView>
 
-      {/* Finish button */}
       <View
         style={[styles.finishBar, { paddingBottom: Math.max(insets.bottom, 16) }]}
       >
@@ -436,8 +427,6 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   );
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatElapsed(isoString: string): string {
   const start = new Date(isoString).getTime();
   const now = Date.now();
@@ -451,8 +440,6 @@ function formatElapsed(isoString: string): string {
   const remainingMinutes = minutes % 60;
   return `${hours}h ${remainingMinutes}m ago`;
 }
-
-// ── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -502,8 +489,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
     marginBottom: 16,
   },
-
-  // Tags
   tagSection: {
     marginBottom: 24,
   },
@@ -565,8 +550,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 48,
   },
-
-  // Exercise card
   exerciseCard: {
     backgroundColor: colors.primary.white,
     borderWidth: 1,
@@ -595,8 +578,6 @@ const styles = StyleSheet.create({
     color: colors.primary.red,
     fontWeight: '600',
   },
-
-  // Set header
   setHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -607,8 +588,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary.greyDark,
   },
-
-  // Set row
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -653,8 +632,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 4,
   },
-
-  // Add exercise
   addExerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,8 +652,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-
-  // Finish bar
   finishBar: {
     paddingHorizontal: 24,
     paddingTop: 12,

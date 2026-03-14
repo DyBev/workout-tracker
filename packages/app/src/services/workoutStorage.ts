@@ -4,8 +4,6 @@ import type { Workout } from '../types/workout';
 const ACTIVE_WORKOUT_KEY = 'workout:active';
 const HISTORY_KEY = 'workout:history';
 
-// ── Active workout ───────────────────────────────────────────────────────────
-
 export async function saveActiveWorkout(workout: Workout): Promise<void> {
   await AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(workout));
 }
@@ -20,8 +18,6 @@ export async function clearActiveWorkout(): Promise<void> {
   await AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY);
 }
 
-// ── Workout history ──────────────────────────────────────────────────────────
-
 export async function getWorkoutHistory(): Promise<Workout[]> {
   const raw = await AsyncStorage.getItem(HISTORY_KEY);
   if (!raw) return [];
@@ -30,7 +26,6 @@ export async function getWorkoutHistory(): Promise<Workout[]> {
 
 export async function saveWorkoutToHistory(workout: Workout): Promise<void> {
   const history = await getWorkoutHistory();
-  // Prepend newest first
   history.unshift(workout);
   await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }

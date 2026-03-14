@@ -1,7 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-// ── Set ──────────────────────────────────────────────────────────────────────
-
 export interface WorkoutSet {
   setId: string;
   order: number;
@@ -10,8 +8,6 @@ export interface WorkoutSet {
   weightUnit: 'kg' | 'lbs';
 }
 
-// ── Exercise ─────────────────────────────────────────────────────────────────
-
 export interface WorkoutExercise {
   exerciseId: string;
   name: string;
@@ -19,19 +15,13 @@ export interface WorkoutExercise {
   sets: WorkoutSet[];
 }
 
-// ── Body-weight map ──────────────────────────────────────────────────────────
-
 export interface BodyWeight {
   value: number;
   unit: 'kg' | 'lbs';
 }
 
-// ── Workout (matches DynamoDB single-table item) ─────────────────────────────
-
 export interface Workout {
-  /** Partition key — user identifier */
   userId: string;
-  /** Sort key — WORKOUT#<timestamp>#<workoutId> */
   sk: string;
   workoutId: string;
   templateId: string | null;
@@ -44,8 +34,6 @@ export interface Workout {
   createdAt: string;
   updatedAt: string;
 }
-
-// ── Navigation ───────────────────────────────────────────────────────────────
 
 export type AppStackParamList = {
   Home: undefined;
@@ -68,8 +56,6 @@ export type WorkoutSummaryScreenProps = NativeStackScreenProps<
   AppStackParamList,
   'WorkoutSummary'
 >;
-
-// ── Context state ────────────────────────────────────────────────────────────
 
 export interface WorkoutState {
   activeWorkout: Workout | null;

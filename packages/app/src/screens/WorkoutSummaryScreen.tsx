@@ -65,7 +65,6 @@ export function WorkoutSummaryScreen({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title} accessibilityRole="header">
           Workout Complete
@@ -93,7 +92,6 @@ export function WorkoutSummaryScreen({
           { paddingBottom: insets.bottom + 24 },
         ]}
       >
-        {/* Stats summary */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{workout.exercises.length}</Text>
@@ -125,7 +123,6 @@ export function WorkoutSummaryScreen({
           </View>
         ) : null}
 
-        {/* Exercise breakdown */}
         {workout.exercises.map((exercise) => (
           <View key={exercise.exerciseId} style={styles.exerciseSection}>
             <Text style={styles.exerciseName}>{exercise.name}</Text>

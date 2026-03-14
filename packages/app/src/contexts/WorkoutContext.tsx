@@ -19,8 +19,6 @@ import type {
 } from '../types/workout';
 import { useNavigation } from '@react-navigation/native';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function generateId(): string {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
@@ -28,8 +26,6 @@ function generateId(): string {
 function buildSortKey(timestamp: string, workoutId: string): string {
   return `WORKOUT#${timestamp}#${workoutId}`;
 }
-
-// ── Reducer ──────────────────────────────────────────────────────────────────
 
 const initialState: WorkoutState = {
   activeWorkout: null,
@@ -65,8 +61,6 @@ function workoutReducer(
   }
 }
 
-// ── Context ──────────────────────────────────────────────────────────────────
-
 const WorkoutContext = createContext<WorkoutContextValue | null>(null);
 
 interface WorkoutProviderProps {
@@ -97,7 +91,6 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     restore();
   }, []);
 
-  // Persist active workout on every change
   useEffect(() => {
     if (state.activeWorkout) {
       workoutStorage.saveActiveWorkout(state.activeWorkout);

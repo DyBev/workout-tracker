@@ -33,7 +33,6 @@ export function useAuthForm<T extends Record<string, string>>({
 
   const setValue = useCallback((field: keyof T, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
-    // Clear field error when user starts typing
     setErrors((prev) => {
       if (prev[field]) {
         const next = { ...prev };
