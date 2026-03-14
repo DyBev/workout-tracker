@@ -60,7 +60,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? '#ffffff' : '#6b7280'}
+          color={variant === 'primary' ? colors.primary.white : colors.primary.greyDark}
           accessibilityLabel="Loading"
         />
       ) : (
