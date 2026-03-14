@@ -12,6 +12,7 @@ import { FormInput, Button, FormError } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthForm } from '../hooks/useAuthForm';
 import type { AuthStackParamList } from '../types/auth';
+import { colors } from '../constants/colors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.primary.greyDark,
     marginBottom: 32,
     textAlign: 'center',
     lineHeight: 22,
