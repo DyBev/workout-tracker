@@ -37,5 +37,13 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
-/android
+ios/
+android/
+
+# Go
+functions/bin/
+functions/tmp/
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
