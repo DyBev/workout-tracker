@@ -75,9 +75,7 @@ export type AuthStackParamList = {
   ResetPassword: { email: string };
 };
 
-export type AppStackParamList = {
-  Home: undefined;
-};
+export type { AppStackParamList } from './workout';
 
 export type FormField = {
   value: string;

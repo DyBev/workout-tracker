@@ -1,10 +1,10 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import { LoadingOverlay } from './src/components/LoadingOverlay';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { WorkoutProvider } from './src/contexts/WorkoutContext';
 import {
   SignInScreen,
   SignUpScreen,
@@ -12,8 +12,12 @@ import {
   ForgotPasswordScreen,
   ResetPasswordScreen,
   HomeScreen,
+  ActiveWorkoutScreen,
+  WorkoutHistoryScreen,
+  WorkoutSummaryScreen,
 } from './src/screens';
-import type { AuthStackParamList, AppStackParamList } from './src/types/auth';
+import type { AuthStackParamList } from './src/types/auth';
+import type { AppStackParamList } from './src/types/workout';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
@@ -35,9 +39,14 @@ function AuthNavigator() {
 
 function AppNavigator() {
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name="Home" component={HomeScreen} />
-    </AppStack.Navigator>
+    <WorkoutProvider>
+      <AppStack.Navigator screenOptions={{ headerShown: false }}>
+        <AppStack.Screen name="Home" component={HomeScreen} />
+        <AppStack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
+        <AppStack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} />
+        <AppStack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} />
+      </AppStack.Navigator>
+    </WorkoutProvider>
   );
 }
 

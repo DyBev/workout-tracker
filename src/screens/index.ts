@@ -4,3 +4,6 @@ export { ConfirmSignUpScreen } from './ConfirmSignUpScreen';
 export { ForgotPasswordScreen } from './ForgotPasswordScreen';
 export { ResetPasswordScreen } from './ResetPasswordScreen';
 export { HomeScreen } from './HomeScreen';
+export { ActiveWorkoutScreen } from './ActiveWorkoutScreen';
+export { WorkoutHistoryScreen } from './WorkoutHistoryScreen';
+export { WorkoutSummaryScreen } from './WorkoutSummaryScreen';
