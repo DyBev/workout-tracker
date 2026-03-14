@@ -7,6 +7,7 @@ import {
   type ViewStyle,
   type PressableProps,
 } from 'react-native';
+import { colors } from '../constants/colors';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'link';
 
@@ -79,12 +80,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   primary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.primary.blue,
   },
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#2563eb',
+    borderColor: colors.primary.blue,
   },
   link: {
     backgroundColor: 'transparent',
@@ -100,16 +101,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   primaryText: {
-    color: '#ffffff',
+    color: colors.primary.white,
   },
   secondaryText: {
-    color: '#2563eb',
+    color: colors.primary.blue,
   },
   linkText: {
-    color: '#2563eb',
+    color: colors.primary.blue,
     fontWeight: '400',
   },
   disabledText: {
-    color: '#9ca3af',
+    color: colors.primary.grey,
   },
 });
