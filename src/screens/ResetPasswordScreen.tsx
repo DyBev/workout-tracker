@@ -13,6 +13,7 @@ import { FormInput, PasswordInput, Button, FormError } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { useAuthForm } from '../hooks/useAuthForm';
 import type { AuthStackParamList } from '../types/auth';
+import { colors } from '../constants/colors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
 
@@ -180,14 +181,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.primary.greyDark,
     marginBottom: 32,
     textAlign: 'center',
     lineHeight: 22,
   },
   emailText: {
     fontWeight: '600',
-    color: '#111827',
+    color: colors.primary.black,
   },
   submitButton: {
     marginTop: 8,
