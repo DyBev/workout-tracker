@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { LoadingOverlay } from './src/components/LoadingOverlay';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -45,13 +46,7 @@ function RootNavigator() {
 
   if (state.isLoading) {
     return (
-      <View
-        style={styles.loading}
-        accessibilityLabel="Loading application"
-        accessibilityRole="progressbar"
-      >
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
+      <LoadingOverlay visible={true} message="loading" />
     );
   }
 
@@ -68,12 +63,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-});
