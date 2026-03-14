@@ -11,12 +11,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../contexts/WorkoutContext';
-import { Button } from '../components';
+import { Button, ConfirmationDialog } from '../components';
 import { colors } from '../constants/colors';
 import type { ActiveWorkoutScreenProps } from '../types/workout';
 import type { WorkoutExercise, WorkoutSet } from '../types/workout';
-
-// ── Tag input ────────────────────────────────────────────────────────────────
 
 interface TagInputProps {
   tags: string[];
@@ -90,8 +88,6 @@ function TagInput({ tags, onUpdateTags }: TagInputProps) {
   );
 }
 
-// ── Add exercise modal (inline) ──────────────────────────────────────────────
-
 interface AddExerciseRowProps {
   onAdd: (name: string) => void;
 }
@@ -131,8 +127,6 @@ function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
     </View>
   );
 }
-
-// ── Set row ──────────────────────────────────────────────────────────────────
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -210,8 +204,6 @@ function SetRow({ set, exerciseId, onUpdateSet, onRemoveSet }: SetRowProps) {
     </View>
   );
 }
-
-// ── Exercise card ────────────────────────────────────────────────────────────
 
 interface ExerciseCardProps {
   exercise: WorkoutExercise;
@@ -307,6 +299,7 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   } = useWorkout();
   const insets = useSafeAreaInsets();
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const workout = state.activeWorkout;
 
@@ -331,18 +324,18 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   }, [workout, completeWorkout, navigation]);
 
   const handleDiscard = useCallback(() => {
-    Alert.alert('Discard workout?', 'All progress will be lost.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Discard',
-        style: 'destructive',
-        onPress: async () => {
-          await discardWorkout();
-          navigation.goBack();
-        },
-      },
-    ]);
+    setShowDiscardDialog(true);
+  }, []);
+
+  const handleConfirmDiscard = useCallback(async () => {
+    setShowDiscardDialog(false);
+    await discardWorkout();
+    navigation.navigate('Home');
   }, [discardWorkout, navigation]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setShowDiscardDialog(false);
+  }, []);
 
   if (!workout) {
     return (
@@ -428,6 +421,17 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
           containerStyle={styles.finishButton}
         />
       </View>
+
+      <ConfirmationDialog
+        visible={showDiscardDialog}
+        title="Discard workout?"
+        message="All progress will be lost."
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={handleConfirmDiscard}
+        onCancel={handleCancelDiscard}
+      />
     </View>
   );
 }

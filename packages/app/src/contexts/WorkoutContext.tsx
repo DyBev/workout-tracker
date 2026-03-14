@@ -17,6 +17,7 @@ import type {
   WorkoutSet,
   WorkoutState,
 } from '../types/workout';
+import { useNavigation } from '@react-navigation/native';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,8 +76,8 @@ interface WorkoutProviderProps {
 export function WorkoutProvider({ children }: WorkoutProviderProps) {
   const [state, dispatch] = useReducer(workoutReducer, initialState);
   const { state: authState } = useAuth();
+  const navigation = useNavigation();
 
-  // Restore persisted state on mount
   useEffect(() => {
     async function restore() {
       try {
@@ -102,8 +103,6 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       workoutStorage.saveActiveWorkout(state.activeWorkout);
     }
   }, [state.activeWorkout]);
-
-  // ── Actions ──────────────────────────────────────────────────────────────
 
   const startWorkout = useCallback(() => {
     const now = new Date().toISOString();
@@ -268,14 +267,13 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   const discardWorkout = useCallback(async () => {
     await workoutStorage.clearActiveWorkout();
     dispatch({ type: 'DISCARD_WORKOUT' });
-  }, []);
+    navigation.navigate('Home');
+  }, [navigation]);
 
   const loadHistory = useCallback(async () => {
     const history = await workoutStorage.getWorkoutHistory();
     dispatch({ type: 'LOAD_HISTORY', workouts: history });
   }, []);
-
-  // ── Memoised value ──────────────────────────────────────────────────────
 
   const value = useMemo<WorkoutContextValue>(
     () => ({
