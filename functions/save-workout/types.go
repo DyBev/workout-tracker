@@ -41,3 +41,9 @@ type Workout struct {
 	CreatedAt   string            `json:"createdAt" dynamodbav:"createdAt"`
 	UpdatedAt   string            `json:"updatedAt" dynamodbav:"updatedAt"`
 }
+
+type SaveResult struct {
+	WorkoutID string `json:"workoutId"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+}

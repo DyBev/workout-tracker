@@ -285,7 +285,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       const payload = toSync.length === 1 ? toSync[0] : toSync;
       const result = await workoutApi.saveWorkouts(payload);
 
-      const ids = toSync.map((w) => w.workoutId);
+      const ids = result.results.filter((w) => w.status === 'saved').map((w) => w.workoutId);
 
       if (result.success) {
         dispatch({ type: 'MARK_SYNCED', workoutIds: ids });

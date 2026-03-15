@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "workout-tracker",
+      "dependencies": {
+        "@react-native-async-storage/async-storage": "3.0.1",
+      },
     },
     "packages/app": {
       "name": "@workout-tracker/app",

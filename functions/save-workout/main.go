@@ -12,9 +12,6 @@ import (
 
 func main() {
 	tableName := os.Getenv("TABLE_NAME")
-	if tableName == "" {
-		tableName = "WorkoutTable"
-	}
 
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("eu-west-2"))
 	if err != nil {
