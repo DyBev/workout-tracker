@@ -47,4 +47,4 @@ functions/tmp/
 # AWS SAM
 .aws-sam/
 samconfig.toml
-/build/*
+build/*
