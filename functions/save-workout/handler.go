@@ -54,7 +54,6 @@ func (h *Handler) HandleRequest(
 
 	var userID string;
 	if req.RequestContext.Authorizer != nil {
-		fmt.Printf("Authoriser object: %v\n", req.RequestContext.Authorizer)
 		jwt, ok := req.RequestContext.Authorizer["jwt"];
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
@@ -63,7 +62,6 @@ func (h *Handler) HandleRequest(
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
-		fmt.Printf("JWT claims: %v\n", claims)
 		userID, ok = claims.(map[string]any)["sub"].(string)
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
@@ -304,8 +302,6 @@ func validate(w *Workout, userID string) error {
 			return errors.New("bodyWeight.unit must be \"kg\" or \"lbs\"")
 		}
 	}
-
-	fmt.Printf("workout: %v\n", *w);
 
 	return nil
 }
