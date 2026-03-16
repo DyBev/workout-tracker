@@ -29,6 +29,7 @@ const initialState: WorkoutState = {
   history: [],
   isLoading: true,
   failedSyncIds: new Set(),
+  nextSk: "",
 };
 
 function workoutReducer(
@@ -73,6 +74,36 @@ function workoutReducer(
         failedSyncIds: nextFailed,
       };
     }
+
+	case 'SET_NEXT_SK': {
+		return {
+			...state,
+			nextSk: action.sk,
+		};
+	}
+
+	case 'ADD_WORKOUTS': {
+		const incoming = action.workouts;
+
+		const historyMap = new Map(
+			state.history.map(w => [w.workoutId, w])
+		);
+
+		for (const workout of incoming) {
+			historyMap.set(workout.workoutId, workout);
+		}
+
+		const history = Array.from(historyMap.values()).sort(
+			(a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)
+		);
+
+		console.log(state.history === history);
+		return {
+			...state,
+			history
+		};
+	}
+
     default:
       return state;
   }
@@ -92,20 +123,27 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   useEffect(() => {
     async function restore() {
       try {
-        const [active, history] = await Promise.all([
+        const [active, history, workouts] = await Promise.all([
           workoutStorage.getActiveWorkout(),
           workoutStorage.getWorkoutHistory(),
+			workoutApi.getWorkouts(""),
         ]);
         if (active) {
           dispatch({ type: 'RESTORE_ACTIVE_WORKOUT', workout: active });
         }
         dispatch({ type: 'LOAD_HISTORY', workouts: history });
+
+		if (workouts.nextSk) {
+			dispatch({ type: 'SET_NEXT_SK', sk: workouts.nextSk });
+		}
+
+		dispatch({ type: 'ADD_WORKOUTS', workouts: workouts.workouts });
       } catch {
         dispatch({ type: 'SET_LOADING', isLoading: false });
       }
     }
 
-    restore();
+	restore();
   }, []);
 
   useEffect(() => {

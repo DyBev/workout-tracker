@@ -63,6 +63,7 @@ export interface WorkoutState {
   history: Workout[];
   isLoading: boolean;
   failedSyncIds: Set<string>;
+  nextSk: string;
 }
 
 export type WorkoutAction =
@@ -74,7 +75,10 @@ export type WorkoutAction =
   | { type: 'LOAD_HISTORY'; workouts: Workout[] }
   | { type: 'RESTORE_ACTIVE_WORKOUT'; workout: Workout }
   | { type: 'MARK_SYNCED'; workoutIds: string[] }
-  | { type: 'MARK_SYNC_FAILED'; workoutIds: string[] };
+  | { type: 'MARK_SYNC_FAILED'; workoutIds: string[] }
+  | { type: 'ADD_WORKOUTS'; workouts: Workout[] }
+  | { type: 'SET_NEXT_SK'; sk: string };
+
 
 export interface WorkoutContextValue {
   state: WorkoutState;

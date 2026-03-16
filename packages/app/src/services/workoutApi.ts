@@ -42,3 +42,26 @@ export async function saveWorkouts(
     return { success: false, status: 0, results: [] };
   }
 }
+
+export const getWorkouts = async (lastSK: string | undefined): Promise<{
+	nextSk: string,
+	workouts: Workout[],
+}> => {
+	try {
+		const session = await getCurrentSession();
+		const response = await fetch(`${baseUrl}/read${lastSK ? `?sk=${lastSK}` : ""}`, {
+			headers: {
+				Authorization: `Bearer ${session?.tokens.idToken}`
+			},
+		});
+		const result = await response.json();
+		return result;
+	} catch (error) {
+		console.error(error);
+		return {
+			nextSk: "",
+			workouts: []
+		};
+	}
+}
+
