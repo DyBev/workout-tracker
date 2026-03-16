@@ -90,7 +90,10 @@ function workoutReducer(
 		);
 
 		for (const workout of incoming) {
-			historyMap.set(workout.workoutId, workout);
+			historyMap.set(workout.workoutId, { 
+				...workout,
+				syncStatus: "synced",
+			});
 		}
 
 		const history = Array.from(historyMap.values()).sort(
