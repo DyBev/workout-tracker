@@ -27,10 +27,10 @@ type BodyWeight struct {
 // It mirrors the TypeScript Workout interface from the frontend.
 type Workout struct {
 	// Partition key — user identifier.
-	UserID string `json:"userId" dynamodbav:"userId"`
-	// Sort key — WORKOUT#<timestamp>#<workoutId>.
-	SK          string            `json:"sk" dynamodbav:"sk"`
-	WorkoutID   string            `json:"workoutId" dynamodbav:"workoutId"`
+	UserID string `json:"userId,omitempty" dynamodbav:"userId"`
+	// Sort key — WORKOUT#<timestamp>#<workoutId>
+	SK          string            `json:"sk,omitempty" dynamodbav:"sk"`
+	WorkoutID   string            `json:"workoutId,omitempty" dynamodbav:"workoutId"`
 	TemplateID  *string           `json:"templateId" dynamodbav:"templateId"`
 	StartedAt   string            `json:"startedAt" dynamodbav:"startedAt"`
 	CompletedAt *string           `json:"completedAt" dynamodbav:"completedAt"`

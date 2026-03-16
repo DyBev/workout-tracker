@@ -23,8 +23,6 @@ export interface BodyWeight {
 export type SyncStatus = 'pending' | 'synced';
 
 export interface Workout {
-  userId: string;
-  sk: string;
   workoutId: string;
   templateId: string | null;
   startedAt: string;

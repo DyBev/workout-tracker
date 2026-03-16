@@ -52,7 +52,27 @@ func (h *Handler) HandleRequest(
 		return response(http.StatusInternalServerError, errorBody("table name not configured")), nil
 	}
 
-	workouts, batch, err := parseAndValidateMany(req.Body)
+	var userID string;
+	if req.RequestContext.Authorizer != nil {
+		fmt.Printf("Authoriser object: %v\n", req.RequestContext.Authorizer)
+		jwt, ok := req.RequestContext.Authorizer["jwt"];
+		if !ok {
+			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+		}
+		claims, ok := jwt.(map[string]any)["claims"];
+		if !ok {
+			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+		}
+		fmt.Printf("JWT claims: %v\n", claims)
+		userID, ok = claims.(map[string]any)["sub"].(string)
+		if !ok {
+			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+		}
+	} else {
+		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+	}
+
+	workouts, batch, err := parseAndValidateMany(req.Body, userID)
 	if err != nil {
 		return response(http.StatusBadRequest, errorBody(err.Error())), nil
 	}
@@ -206,16 +226,12 @@ func itemKey(item map[string]types.AttributeValue) string {
 	return pk + "|" + sk
 }
 
-// parseAndValidateMany unmarshals the JSON body into one or more Workouts.
-// It returns the parsed slice, a boolean indicating whether the input was a
-// batch (JSON array), and any parsing/validation error.
-func parseAndValidateMany(body string) ([]Workout, bool, error) {
+func parseAndValidateMany(body string, userID string) ([]Workout, bool, error) {
 	trimmed := strings.TrimSpace(body)
 	if trimmed == "" {
 		return nil, false, errors.New("request body is empty")
 	}
 
-	// Detect whether the payload is an array or a single object.
 	if trimmed[0] == '[' {
 		var workouts []Workout
 		if err := json.Unmarshal([]byte(trimmed), &workouts); err != nil {
@@ -225,7 +241,7 @@ func parseAndValidateMany(body string) ([]Workout, bool, error) {
 			return nil, true, errors.New("workout array is empty")
 		}
 		for i := range workouts {
-			if err := validate(&workouts[i]); err != nil {
+			if err := validate(&workouts[i], userID); err != nil {
 				return nil, true, fmt.Errorf("workouts[%d]: %w", i, err)
 			}
 		}
@@ -236,22 +252,20 @@ func parseAndValidateMany(body string) ([]Workout, bool, error) {
 	if err := json.Unmarshal([]byte(trimmed), &w); err != nil {
 		return nil, false, fmt.Errorf("invalid JSON: %w", err)
 	}
-	if err := validate(&w); err != nil {
+	if err := validate(&w, userID); err != nil {
 		return nil, false, err
 	}
 	return []Workout{w}, false, nil
 }
 
-// validate checks that all required fields are present on the Workout.
-func validate(w *Workout) error {
-	var missing []string
+func generateSK(w *Workout) {
+	w.SK = fmt.Sprintf("WORKOUT#%s#%s", w.StartedAt, w.WorkoutID)
+}
 
-	if w.UserID == "" {
-		missing = append(missing, "userId")
-	}
-	if w.SK == "" {
-		missing = append(missing, "sk")
-	}
+func validate(w *Workout, userID string) error {
+	var missing []string
+	w.UserID = userID;
+
 	if w.WorkoutID == "" {
 		missing = append(missing, "workoutId")
 	}
@@ -264,6 +278,8 @@ func validate(w *Workout) error {
 	if w.UpdatedAt == "" {
 		missing = append(missing, "updatedAt")
 	}
+
+	generateSK(w)
 
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required fields: %s", strings.Join(missing, ", "))
@@ -280,9 +296,6 @@ func validate(w *Workout) error {
 			if s.SetID == "" {
 				return fmt.Errorf("exercises[%d].sets[%d]: missing setId", i, j)
 			}
-			if s.WeightUnit != "kg" && s.WeightUnit != "lbs" {
-				return fmt.Errorf("exercises[%d].sets[%d]: weightUnit must be \"kg\" or \"lbs\"", i, j)
-			}
 		}
 	}
 
@@ -291,6 +304,8 @@ func validate(w *Workout) error {
 			return errors.New("bodyWeight.unit must be \"kg\" or \"lbs\"")
 		}
 	}
+
+	fmt.Printf("workout: %v\n", *w);
 
 	return nil
 }

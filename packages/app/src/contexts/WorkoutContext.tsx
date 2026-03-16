@@ -24,10 +24,6 @@ function generateId(): string {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
-function buildSortKey(timestamp: string, workoutId: string): string {
-  return `WORKOUT#${timestamp}#${workoutId}`;
-}
-
 const initialState: WorkoutState = {
   activeWorkout: null,
   history: [],
@@ -127,11 +123,8 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   const startWorkout = useCallback(() => {
     const now = new Date().toISOString();
     const workoutId = generateId();
-    const userId = authState.user?.sub ?? 'local';
 
     const workout: Workout = {
-      userId,
-      sk: buildSortKey(now, workoutId),
       workoutId,
       templateId: null,
       startedAt: now,

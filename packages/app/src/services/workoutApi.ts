@@ -15,7 +15,6 @@ const baseUrl = process.env.EXPO_PUBLIC_API_DOMAIN;
 export async function saveWorkouts(
   workouts: Workout | Workout[],
 ): Promise<SaveWorkoutsResult> {
-  console.log('Saving workouts to API...', baseUrl);
   try {
     const session = await getCurrentSession();
     if (!session) {
@@ -32,7 +31,6 @@ export async function saveWorkouts(
     });
 
     const responseData = await response.json();
-    console.log('API response:', responseData);
     const results = responseData.results;
 
     return {
