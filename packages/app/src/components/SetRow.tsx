@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, Platform, StyleSheet } from 'react-native';
 import { colors } from '../constants/colors';
 import { WorkoutSet } from '../types/workout';
@@ -16,6 +16,17 @@ interface SetRowProps {
 }
 
 export function SetRow({ set, exerciseId, onUpdateSet, onRemoveSet }: SetRowProps) {
+  const [weightInput, setWeightInput] = useState<string>(
+    set.weight !== null ? String(set.weight) : '',
+  );
+  const isWeightFocused = useRef(false);
+
+  useEffect(() => {
+    if (!isWeightFocused.current) {
+      setWeightInput(set.weight !== null ? String(set.weight) : '');
+    }
+  }, [set.weight]);
+
   const handleRepsChange = useCallback(
     (text: string) => {
       const parsed = text === '' ? null : parseInt(text, 10);
@@ -27,12 +38,34 @@ export function SetRow({ set, exerciseId, onUpdateSet, onRemoveSet }: SetRowProp
 
   const handleWeightChange = useCallback(
     (text: string) => {
-      const parsed = text === '' ? null : parseFloat(text);
-      const value = parsed !== null && isNaN(parsed) ? set.weight : parsed;
-      onUpdateSet(exerciseId, set.setId, 'weight', value);
+      if (text !== '' && isNaN(parseFloat(text)) && text !== '.') {
+        return;
+      }
+      setWeightInput(text);
+
+      if (text === '' || text === '.') {
+        onUpdateSet(exerciseId, set.setId, 'weight', text === '' ? null : set.weight);
+      } else {
+        const parsed = parseFloat(text);
+        if (!isNaN(parsed)) {
+          onUpdateSet(exerciseId, set.setId, 'weight', parsed);
+        }
+      }
     },
     [exerciseId, set.setId, set.weight, onUpdateSet],
   );
+
+  const handleWeightBlur = useCallback(() => {
+    isWeightFocused.current = false;
+    const parsed = parseFloat(weightInput);
+    if (weightInput === '' || isNaN(parsed)) {
+      setWeightInput('');
+      onUpdateSet(exerciseId, set.setId, 'weight', null);
+    } else {
+      setWeightInput(String(parsed));
+      onUpdateSet(exerciseId, set.setId, 'weight', parsed);
+    }
+  }, [exerciseId, set.setId, weightInput, onUpdateSet]);
 
   const handleRemove = useCallback(() => {
     onRemoveSet(exerciseId, set.setId);
@@ -63,8 +96,10 @@ export function SetRow({ set, exerciseId, onUpdateSet, onRemoveSet }: SetRowProp
         placeholder="Weight"
         placeholderTextColor={colors.primary.grey}
         keyboardType="decimal-pad"
-        value={set.weight !== null ? String(set.weight) : ''}
+        value={weightInput}
         onChangeText={handleWeightChange}
+        onFocus={() => { isWeightFocused.current = true; }}
+        onBlur={handleWeightBlur}
         accessibilityLabel={`Set ${set.order} weight`}
       />
       <Text style={styles.unitLabel}>kg</Text>
@@ -85,6 +120,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+	gap: 8,
+	flexWrap: 'wrap',
   },
   setLabel: {
     width: 32,
