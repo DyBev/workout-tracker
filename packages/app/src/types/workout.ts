@@ -75,9 +75,8 @@ export type WorkoutAction =
   | { type: 'LOAD_HISTORY'; workouts: Workout[] }
   | { type: 'RESTORE_ACTIVE_WORKOUT'; workout: Workout }
   | { type: 'MARK_SYNCED'; workoutIds: string[] }
-  | { type: 'MARK_SYNC_FAILED'; workoutIds: string[] }
-  | { type: 'ADD_WORKOUTS'; workouts: Workout[] }
-  | { type: 'SET_NEXT_SK'; sk: string };
+  | { type: 'SET_NEXT_SK'; sk: string }
+  | { type: 'MARK_SYNC_FAILED'; workoutIds: string[] };
 
 
 export interface WorkoutContextValue {
@@ -98,6 +97,5 @@ export interface WorkoutContextValue {
   updateBodyWeight: (bodyWeight: BodyWeight | null) => void;
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
-  loadHistory: () => Promise<void>;
   syncWorkouts: (workouts?: Workout[]) => Promise<void>;
 }

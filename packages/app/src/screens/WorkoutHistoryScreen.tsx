@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -69,13 +69,9 @@ function WorkoutRow({ workout, onPress }: WorkoutRowProps) {
 export function WorkoutHistoryScreen({
   navigation,
 }: WorkoutHistoryScreenProps) {
-  const { state, loadHistory } = useWorkout();
+  const { state } = useWorkout();
   const insets = useSafeAreaInsets();
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();

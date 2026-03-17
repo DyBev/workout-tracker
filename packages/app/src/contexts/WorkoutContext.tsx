@@ -53,28 +53,6 @@ function workoutReducer(
       return { ...state, activeWorkout: null };
     case 'LOAD_HISTORY':
       return { ...state, history: action.workouts, isLoading: false };
-    case 'RESTORE_ACTIVE_WORKOUT':
-      return { ...state, activeWorkout: action.workout };
-    case 'MARK_SYNCED':
-      return {
-        ...state,
-        history: state.history.map((w) =>
-          action.workoutIds.includes(w.workoutId)
-            ? { ...w, syncStatus: 'synced' as const }
-            : w,
-        ),
-      };
-    case 'MARK_SYNC_FAILED': {
-      const nextFailed = new Set(state.failedSyncIds);
-      for (const id of action.workoutIds) {
-        nextFailed.add(id);
-      }
-      return {
-        ...state,
-        failedSyncIds: nextFailed,
-      };
-    }
-
 	case 'SET_NEXT_SK': {
 		return {
 			...state,
@@ -82,30 +60,6 @@ function workoutReducer(
 		};
 	}
 
-	case 'ADD_WORKOUTS': {
-		const incoming = action.workouts;
-
-		const historyMap = new Map(
-			state.history.map(w => [w.workoutId, w])
-		);
-
-		for (const workout of incoming) {
-			historyMap.set(workout.workoutId, { 
-				...workout,
-				syncStatus: "synced",
-			});
-		}
-
-		const history = Array.from(historyMap.values()).sort(
-			(a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)
-		);
-
-		console.log(state.history === history);
-		return {
-			...state,
-			history
-		};
-	}
 
     default:
       return state;
@@ -126,40 +80,46 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   useEffect(() => {
     async function restore() {
       try {
-        const [active, history, workouts] = await Promise.all([
+        const [active, pending, workouts] = await Promise.all([
           workoutStorage.getActiveWorkout(),
-          workoutStorage.getWorkoutHistory(),
-			workoutApi.getWorkouts(""),
+          workoutStorage.getPendingWorkouts(),
+          workoutApi.getWorkouts(""),
         ]);
         if (active) {
           dispatch({ type: 'RESTORE_ACTIVE_WORKOUT', workout: active });
         }
-        dispatch({ type: 'LOAD_HISTORY', workouts: history });
 
 		if (workouts.nextSk) {
 			dispatch({ type: 'SET_NEXT_SK', sk: workouts.nextSk });
 		}
 
-		dispatch({ type: 'ADD_WORKOUTS', workouts: workouts.workouts });
+        const apiMap = new Map(workouts.workouts.map((w) => [w.workoutId, w]));
+        for (const w of pending) {
+          if (!apiMap.has(w.workoutId)) {
+            apiMap.set(w.workoutId, w);
+          }
+        }
+        const merged = Array.from(apiMap.values()).sort(
+          (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt),
+        );
+        dispatch({ type: 'LOAD_HISTORY', workouts: merged });
+
+        if (pending.length > 0) {
+          syncWorkouts(pending).catch(() => {});
+        }
       } catch {
         dispatch({ type: 'SET_LOADING', isLoading: false });
       }
     }
 
-	restore();
-  }, []);
+    restore();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (state.activeWorkout) {
       workoutStorage.saveActiveWorkout(state.activeWorkout);
     }
   }, [state.activeWorkout]);
-
-  useEffect(() => {
-    if (!state.isLoading) {
-      syncWorkouts();
-    }
-  }, [state.isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startWorkout = useCallback(() => {
     const now = new Date().toISOString();
@@ -323,10 +283,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
 
       if (result.success) {
         dispatch({ type: 'MARK_SYNCED', workoutIds: ids });
-        const updatedHistory = state.history.map((w) =>
-          ids.includes(w.workoutId) ? { ...w, syncStatus: 'synced' as const } : w,
-        );
-        await workoutStorage.saveWorkoutHistory(updatedHistory);
+        await workoutStorage.deletePendingWorkouts(ids);
       } else {
         dispatch({ type: 'MARK_SYNC_FAILED', workoutIds: ids });
       }
@@ -345,7 +302,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       syncStatus: 'pending',
     };
 
-    await workoutStorage.saveWorkoutToHistory(completed);
+    await workoutStorage.savePendingWorkout(completed);
     await workoutStorage.clearActiveWorkout();
     dispatch({ type: 'COMPLETE_WORKOUT', workout: completed });
 
@@ -357,11 +314,6 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     dispatch({ type: 'DISCARD_WORKOUT' });
     navigation.navigate('Home' as never);
   }, [navigation]);
-
-  const loadHistory = useCallback(async () => {
-    const history = await workoutStorage.getWorkoutHistory();
-    dispatch({ type: 'LOAD_HISTORY', workouts: history });
-  }, []);
 
   const value = useMemo<WorkoutContextValue>(
     () => ({
@@ -377,7 +329,6 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       updateBodyWeight,
       completeWorkout,
       discardWorkout,
-      loadHistory,
       syncWorkouts,
     }),
     [
@@ -393,7 +344,6 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       updateBodyWeight,
       completeWorkout,
       discardWorkout,
-      loadHistory,
       syncWorkouts,
     ],
   );
