@@ -85,15 +85,18 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
           workoutStorage.getPendingWorkouts(),
           workoutApi.getWorkouts(""),
         ]);
-        if (active) {
-          dispatch({ type: 'RESTORE_ACTIVE_WORKOUT', workout: active });
-        }
-
 		if (workouts.nextSk) {
 			dispatch({ type: 'SET_NEXT_SK', sk: workouts.nextSk });
 		}
 
         const apiMap = new Map(workouts.workouts.map((w) => [w.workoutId, w]));
+
+		if (active && !apiMap.has(active.workoutId)) {
+          dispatch({ type: 'START_WORKOUT', workout: active });
+        } else {
+			workoutStorage.clearActiveWorkout();
+		}
+
         for (const w of pending) {
           if (!apiMap.has(w.workoutId)) {
             apiMap.set(w.workoutId, w);
