@@ -17,11 +17,8 @@ import (
 )
 
 const (
-	// maxBatchSize is the DynamoDB BatchWriteItem limit per call.
 	maxBatchSize = 25
-	// maxRetries is the number of times we retry UnprocessedItems.
 	maxRetries = 3
-	// baseRetryDelay is the initial backoff delay for retries.
 	baseRetryDelay = 100 * time.Millisecond
 )
 
@@ -70,7 +67,7 @@ func (h *Handler) HandleRequest(
 		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 	}
 
-	workouts, batch, err := parseAndValidateMany(req.Body, userID)
+	workouts, err := parseAndValidateMany(req.Body, userID)
 	if err != nil {
 		return response(http.StatusBadRequest, errorBody(err.Error())), nil
 	}
@@ -80,18 +77,6 @@ func (h *Handler) HandleRequest(
 		return response(http.StatusInternalServerError, errorBody("failed to save workouts")), err
 	}
 
-	if !batch {
-		if failed[workouts[0].WorkoutID] {
-			return response(http.StatusInternalServerError, errorBody("failed to save workout")),
-				fmt.Errorf("workout %s was not processed after retries", workouts[0].WorkoutID)
-		}
-		return response(http.StatusCreated, map[string]string{
-			"message":   "workout saved",
-			"workoutId": workouts[0].WorkoutID,
-		}), nil
-	}
-
-	// Batch path: report per-workout results.
 	results := make([]SaveResult, len(workouts))
 	for i, w := range workouts {
 		if failed[w.WorkoutID] {
@@ -224,36 +209,36 @@ func itemKey(item map[string]types.AttributeValue) string {
 	return pk + "|" + sk
 }
 
-func parseAndValidateMany(body string, userID string) ([]Workout, bool, error) {
+func parseAndValidateMany(body string, userID string) ([]Workout, error) {
 	trimmed := strings.TrimSpace(body)
 	if trimmed == "" {
-		return nil, false, errors.New("request body is empty")
+		return nil, errors.New("request body is empty")
 	}
 
 	if trimmed[0] == '[' {
 		var workouts []Workout
 		if err := json.Unmarshal([]byte(trimmed), &workouts); err != nil {
-			return nil, true, fmt.Errorf("invalid JSON: %w", err)
+			return nil, fmt.Errorf("invalid JSON: %w", err)
 		}
 		if len(workouts) == 0 {
-			return nil, true, errors.New("workout array is empty")
+			return nil, errors.New("workout array is empty")
 		}
 		for i := range workouts {
 			if err := validate(&workouts[i], userID); err != nil {
-				return nil, true, fmt.Errorf("workouts[%d]: %w", i, err)
+				return nil, fmt.Errorf("workouts[%d]: %w", i, err)
 			}
 		}
-		return workouts, true, nil
+		return workouts, nil
 	}
 
 	var w Workout
 	if err := json.Unmarshal([]byte(trimmed), &w); err != nil {
-		return nil, false, fmt.Errorf("invalid JSON: %w", err)
+		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
 	if err := validate(&w, userID); err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	return []Workout{w}, false, nil
+	return []Workout{w}, nil
 }
 
 func generateSK(w *Workout) {
