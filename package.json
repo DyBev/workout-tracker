@@ -12,6 +12,7 @@
     "build:web": "bun run --filter @workout-tracker/app build:web"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "3.0.1"
+    "@react-native-async-storage/async-storage": "3.0.1",
+    "workbox-build": "^7.4.0"
   }
 }
