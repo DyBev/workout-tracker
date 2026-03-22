@@ -10,6 +10,7 @@ export interface WorkoutSet {
 
 export interface WorkoutExercise {
   exerciseId: string;
+  savedExerciseId: string | null;
   name: string;
   order: number;
   sets: WorkoutSet[];
@@ -31,11 +32,22 @@ export interface Workout {
   syncStatus: SyncStatus;
 }
 
+export interface SavedExercise {
+  savedExerciseId: string;
+  name: string;
+  note: string;
+  tags: string[];
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AppStackParamList = {
   Home: undefined;
   ActiveWorkout: undefined;
   WorkoutHistory: undefined;
   WorkoutSummary: { workoutId: string };
+  SavedExercises: undefined;
 };
 
 export type ActiveWorkoutScreenProps = NativeStackScreenProps<
@@ -51,6 +63,11 @@ export type WorkoutHistoryScreenProps = NativeStackScreenProps<
 export type WorkoutSummaryScreenProps = NativeStackScreenProps<
   AppStackParamList,
   'WorkoutSummary'
+>;
+
+export type SavedExercisesScreenProps = NativeStackScreenProps<
+  AppStackParamList,
+  'SavedExercises'
 >;
 
 export interface WorkoutState {
@@ -77,7 +94,7 @@ export type WorkoutAction =
 export interface WorkoutContextValue {
   state: WorkoutState;
   startWorkout: () => void;
-  addExercise: (name: string) => void;
+  addExercise: (name: string, savedExerciseId?: string | null) => void;
   removeExercise: (exerciseId: string) => void;
   addSet: (exerciseId: string) => void;
   removeSet: (exerciseId: string, setId: string) => void;
@@ -87,10 +104,42 @@ export interface WorkoutContextValue {
     field: 'reps' | 'weight',
     value: number | null,
   ) => void;
+  updateExerciseName: (
+    exerciseId: string,
+    name: string,
+    savedExerciseId: string | null,
+  ) => void;
+  updateExerciseSavedId: (
+    exerciseId: string,
+    savedExerciseId: string,
+  ) => void;
   updateNotes: (notes: string) => void;
   updateTags: (tags: string[]) => void;
   updateBodyWeight: (weight: number) => void;
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   syncWorkouts: (workouts?: Workout[]) => Promise<void>;
+}
+
+export interface SavedExerciseState {
+  savedExercises: SavedExercise[];
+  isLoading: boolean;
+}
+
+export type SavedExerciseAction =
+  | { type: 'LOAD_EXERCISES'; exercises: SavedExercise[] }
+  | { type: 'ADD_EXERCISE'; exercise: SavedExercise }
+  | { type: 'UPDATE_EXERCISE'; exercise: SavedExercise }
+  | { type: 'ARCHIVE_EXERCISE'; savedExerciseId: string; archivedAt: string }
+  | { type: 'RESTORE_EXERCISE'; savedExerciseId: string };
+
+export interface ExerciseContextValue {
+  savedExercises: SavedExercise[];
+  allSavedExercises: SavedExercise[];
+  isLoading: boolean;
+  saveExercise: (name: string) => SavedExercise;
+  updateExercise: (exercise: SavedExercise) => Promise<void>;
+  archiveExercise: (savedExerciseId: string) => Promise<void>;
+  restoreExercise: (savedExerciseId: string) => Promise<void>;
+  getById: (savedExerciseId: string | null) => SavedExercise | undefined;
 }

@@ -7,3 +7,4 @@ export { HomeScreen } from './HomeScreen';
 export { ActiveWorkoutScreen } from './ActiveWorkoutScreen';
 export { WorkoutHistoryScreen } from './WorkoutHistoryScreen';
 export { WorkoutSummaryScreen } from './WorkoutSummaryScreen';
+export { SavedExercisesScreen } from './SavedExercisesScreen';

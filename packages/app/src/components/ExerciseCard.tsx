@@ -1,13 +1,14 @@
-
-import { useCallback } from 'react';
-import { WorkoutExercise } from '../types/workout';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useState } from 'react';
+import { WorkoutExercise, SavedExercise } from '../types/workout';
+import { View, Text, Pressable, Modal, StyleSheet, Platform } from 'react-native';
 import { Button } from './Button';
 import { SetRow } from './SetRow';
 import { colors } from '../constants/colors';
+import { DocumentAttachment, Star, StarFilled } from '@carbon/icons-react';
 
 interface ExerciseCardProps {
   exercise: WorkoutExercise;
+  savedExercise: SavedExercise | undefined;
   onAddSet: (exerciseId: string) => void;
   onRemoveSet: (exerciseId: string, setId: string) => void;
   onUpdateSet: (
@@ -17,15 +18,22 @@ interface ExerciseCardProps {
     value: number | null,
   ) => void;
   onRemoveExercise: (exerciseId: string) => void;
+  onSaveExercise: (name: string) => void;
+  onEditExercise: (savedExercise: SavedExercise) => void;
 }
 
 export function ExerciseCard({
   exercise,
+  savedExercise,
   onAddSet,
   onRemoveSet,
   onUpdateSet,
   onRemoveExercise,
+  onSaveExercise,
+  onEditExercise,
 }: ExerciseCardProps) {
+  const [showNotePopover, setShowNotePopover] = useState(false);
+
   const handleAddSet = useCallback(() => {
     onAddSet(exercise.exerciseId);
   }, [exercise.exerciseId, onAddSet]);
@@ -34,9 +42,32 @@ export function ExerciseCard({
     onRemoveExercise(exercise.exerciseId);
   }, [exercise.exerciseId, onRemoveExercise]);
 
+  const handleBookmarkPress = useCallback(() => {
+    if (savedExercise) {
+      onEditExercise(savedExercise);
+    } else {
+      onSaveExercise(exercise.name);
+    }
+  }, [savedExercise, onEditExercise, onSaveExercise, exercise.name]);
+
+  const handleNotePress = useCallback(() => {
+    setShowNotePopover(true);
+  }, []);
+
+  const isSaved = !!savedExercise;
+  const hasNote = !!(savedExercise?.note);
+
   return (
     <View style={styles.exerciseCard}>
       <View style={styles.exerciseHeader}>
+        <Pressable
+          onPress={handleBookmarkPress}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? `Edit saved exercise ${exercise.name}` : `Save exercise ${exercise.name}`}
+          style={styles.bookmarkButton}
+        >
+          { isSaved ? <StarFilled size={16} />  : <Star size={16} /> }
+        </Pressable>
         <Text
           style={styles.exerciseName}
           accessibilityRole="header"
@@ -52,6 +83,16 @@ export function ExerciseCard({
           <Text style={styles.removeExerciseText}>Remove</Text>
         </Pressable>
       </View>
+      {hasNote && (
+        <Pressable
+          onPress={handleNotePress}
+          accessibilityRole="button"
+          accessibilityLabel={`View note for ${exercise.name}`}
+          style={styles.noteButton}
+        >
+          <DocumentAttachment size={16} /> <Text>Saved note</Text>
+        </Pressable>
+      )}
 
       {exercise.sets.length > 0 && (
         <View style={styles.setHeaderRow}>
@@ -79,6 +120,34 @@ export function ExerciseCard({
         onPress={handleAddSet}
         containerStyle={styles.addSetButton}
       />
+
+      {/* Note Popover */}
+      <Modal
+        visible={showNotePopover}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNotePopover(false)}
+      >
+        <Pressable
+          style={styles.popoverOverlay}
+          onPress={() => setShowNotePopover(false)}
+        >
+          <View style={styles.popoverContainer}>
+            <View style={styles.popoverHeader}>
+              <Text style={styles.popoverTitle}>Note - {exercise.name}</Text>
+              <Pressable
+                onPress={() => setShowNotePopover(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close note"
+                style={styles.popoverClose}
+              >
+                <Text style={styles.popoverCloseText}>Close</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.popoverText}>{savedExercise?.note}</Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -94,14 +163,36 @@ const styles = StyleSheet.create({
   },
   exerciseHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  bookmarkButton: {
+    paddingRight: 8,
+    paddingVertical: 2,
+  },
+  bookmarkIcon: {
+    fontSize: 18,
+    color: colors.primary.grey,
+  },
+  bookmarkIconSaved: {
+    color: colors.primary.blue,
   },
   exerciseName: {
     fontSize: 16,
     fontWeight: '700',
     flex: 1,
+  },
+  noteButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    display: 'flex',
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  noteIcon: {
+    fontSize: 16,
+    color: colors.primary.blue,
   },
   removeExerciseButton: {
     paddingVertical: 4,
@@ -165,5 +256,60 @@ const styles = StyleSheet.create({
   addSetButton: {
     alignSelf: 'flex-start',
     marginTop: 4,
+  },
+  // Note popover styles
+  popoverOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  popoverContainer: {
+    backgroundColor: colors.primary.white,
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '60%',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary.black,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+      },
+    }),
+  },
+  popoverHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  popoverTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  popoverClose: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  popoverCloseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary.blue,
+  },
+  popoverText: {
+    fontSize: 14,
+    color: colors.primary.greyDarkest,
+    lineHeight: 20,
   },
 });

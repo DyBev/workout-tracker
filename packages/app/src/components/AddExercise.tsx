@@ -11,45 +11,83 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { colors } from '../constants/colors';
 import { useWorkout } from '../contexts/WorkoutContext';
+import { useExercise } from '../contexts/ExerciseContext';
+
+interface ExerciseSuggestion {
+  name: string;
+  isSaved: boolean;
+  savedExerciseId: string | null;
+}
 
 interface AddExerciseRowProps {
-  onAdd: (name: string) => void;
+  onAdd: (name: string, savedExerciseId?: string | null) => void;
 }
 
 export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
   const { state } = useWorkout();
+  const { savedExercises } = useExercise();
 
-  const exerciseNames = useMemo(() => {
-    const names = new Set<string>();
+  const suggestions = useMemo<ExerciseSuggestion[]>(() => {
+    const savedNames = new Map<string, string>();
+    for (const e of savedExercises) {
+      savedNames.set(e.name.toLowerCase(), e.savedExerciseId);
+    }
+
+    const historyNames = new Set<string>();
     for (const w of state.history) {
       for (const ex of w.exercises) {
-        names.add(ex.name);
+        if (!savedNames.has(ex.name.toLowerCase())) {
+          historyNames.add(ex.name);
+        }
       }
     }
-    return Array.from(names).sort((a, b) =>
-      a.toLowerCase().localeCompare(b.toLowerCase()),
-    );
-  }, [state.history]);
+
+    const sortAlpha = (a: string, b: string) =>
+      a.toLowerCase().localeCompare(b.toLowerCase());
+
+    const savedList: ExerciseSuggestion[] = savedExercises
+      .map((e) => e.name)
+      .sort(sortAlpha)
+      .map((name) => ({
+        name,
+        isSaved: true,
+        savedExerciseId: savedNames.get(name.toLowerCase()) ?? null,
+      }));
+
+    const historyList: ExerciseSuggestion[] = Array.from(historyNames)
+      .sort(sortAlpha)
+      .map((name) => ({
+        name,
+        isSaved: false,
+        savedExerciseId: null,
+      }));
+
+    return [...savedList, ...historyList];
+  }, [savedExercises, state.history]);
+
   const [name, setName] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const filteredSuggestions = useMemo(() => {
     const trimmed = name.trim().toLowerCase();
-    if (!trimmed || exerciseNames.length === 0) return [];
-    return exerciseNames.filter((n) => n.toLowerCase().includes(trimmed));
-  }, [name, exerciseNames]);
+    if (!trimmed || suggestions.length === 0) return [];
+    return suggestions.filter((s) => s.name.toLowerCase().includes(trimmed));
+  }, [name, suggestions]);
 
   const handleAdd = useCallback(() => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onAdd(trimmed);
+    const match = suggestions.find(
+      (s) => s.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    onAdd(trimmed, match?.savedExerciseId ?? null);
     setName('');
     setShowSuggestions(false);
-  }, [name, onAdd]);
+  }, [name, onAdd, suggestions]);
 
   const handleSelect = useCallback(
-    (selected: string) => {
-      onAdd(selected);
+    (selected: ExerciseSuggestion) => {
+      onAdd(selected.name, selected.savedExerciseId);
       setName('');
       setShowSuggestions(false);
     },
@@ -91,17 +129,39 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
             <View style={styles.suggestionsContainer}>
               <FlatList
                 data={visibleSuggestions}
-                keyExtractor={(item) => item}
+                keyExtractor={(item) => `${item.isSaved ? 's' : 'h'}_${item.name}`}
                 keyboardShouldPersistTaps="handled"
                 style={styles.suggestionsList}
                 renderItem={({ item }) => (
                   <Pressable
-                    style={styles.suggestionItem}
+                    style={[
+                      styles.suggestionItem,
+                      item.isSaved && styles.savedSuggestionItem,
+                    ]}
                     onPress={() => handleSelect(item)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${item}`}
+                    accessibilityLabel={`Select ${item.name}${item.isSaved ? ' (saved)' : ''}`}
                   >
-                    <Text style={styles.suggestionText}>{item}</Text>
+                    <View style={styles.suggestionContent}>
+                      {item.isSaved && (
+                        <View style={styles.bookmarkIcon}>
+                          <Text style={styles.bookmarkIconText}>&#9733;</Text>
+                        </View>
+                      )}
+                      <Text
+                        style={[
+                          styles.suggestionText,
+                          item.isSaved && styles.savedSuggestionText,
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                      {item.isSaved && (
+                        <View style={styles.savedBadge}>
+                          <Text style={styles.savedBadgeText}>Saved</Text>
+                        </View>
+                      )}
+                    </View>
                   </Pressable>
                 )}
               />
@@ -157,7 +217,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary.greyLight,
     borderRadius: 8,
     marginTop: 4,
-    maxHeight: 160,
+    maxHeight: 200,
     ...Platform.select({
       ios: {
         shadowColor: colors.primary.black,
@@ -174,7 +234,7 @@ const styles = StyleSheet.create({
     }),
   },
   suggestionsList: {
-    maxHeight: 160,
+    maxHeight: 200,
   },
   suggestionItem: {
     paddingHorizontal: 12,
@@ -182,8 +242,38 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.primary.greyLight,
   },
+  savedSuggestionItem: {
+    backgroundColor: '#f0f5ff',
+  },
+  suggestionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bookmarkIcon: {
+    marginRight: 6,
+  },
+  bookmarkIconText: {
+    fontSize: 14,
+    color: colors.primary.blue,
+  },
   suggestionText: {
     fontSize: 14,
     color: colors.primary.black,
+    flex: 1,
+  },
+  savedSuggestionText: {
+    fontWeight: '600',
+  },
+  savedBadge: {
+    backgroundColor: colors.primary.blue,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  savedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary.white,
   },
 });

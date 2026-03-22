@@ -157,12 +157,13 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   );
 
   const addExercise = useCallback(
-    (name: string) => {
+    (name: string, savedExerciseId?: string | null) => {
       updateActiveWorkout((workout) => {
         const exerciseId = generateId();
         const order = workout.exercises.length + 1;
         const newExercise: WorkoutExercise = {
           exerciseId,
+          savedExerciseId: savedExerciseId ?? null,
           name,
           order,
           sets: [],
@@ -245,6 +246,24 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     [updateActiveWorkout],
   );
 
+  const updateExerciseSavedId = useCallback(
+    (
+      exerciseId: string,
+      savedExerciseId: string,
+    ) => {
+      updateActiveWorkout((workout) => {
+        const exercises = workout.exercises.map((exercise) => {
+          console.log(exerciseId, exercise.exerciseId);
+          if (exercise.exerciseId !== exerciseId) return exercise;
+          return { ...exercise, savedExerciseId };
+        });
+        console.log(exercises);
+        return { ...workout, exercises };
+      });
+    },
+    [updateActiveWorkout],
+  );
+
   const updateNotes = useCallback(
     (notes: string) => {
       updateActiveWorkout((workout) => ({ ...workout, notes }));
@@ -262,6 +281,18 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   const updateBodyWeight = useCallback(
     (bodyWeight: number) => {
       updateActiveWorkout((workout) => ({ ...workout, bodyWeight }));
+    },
+    [updateActiveWorkout],
+  );
+
+  const updateExerciseName = useCallback(
+    (exerciseId: string, name: string, savedExerciseId: string | null) => {
+      updateActiveWorkout((workout) => ({
+        ...workout,
+        exercises: workout.exercises.map((e) =>
+          e.exerciseId === exerciseId ? { ...e, name, savedExerciseId } : e,
+        ),
+      }));
     },
     [updateActiveWorkout],
   );
@@ -326,6 +357,8 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       addSet,
       removeSet,
       updateSet,
+      updateExerciseName,
+      updateExerciseSavedId,
       updateNotes,
       updateTags,
       updateBodyWeight,
@@ -341,6 +374,8 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       addSet,
       removeSet,
       updateSet,
+      updateExerciseName,
+      updateExerciseSavedId,
       updateNotes,
       updateTags,
       updateBodyWeight,

@@ -11,10 +11,11 @@ type WorkoutSet struct {
 
 // WorkoutExercise represents an exercise performed during a workout.
 type WorkoutExercise struct {
-	ExerciseID string       `json:"exerciseId" dynamodbav:"exerciseId"`
-	Name       string       `json:"name" dynamodbav:"name"`
-	Order      int          `json:"order" dynamodbav:"order"`
-	Sets       []WorkoutSet `json:"sets" dynamodbav:"sets"`
+	ExerciseID      string       `json:"exerciseId" dynamodbav:"exerciseId"`
+	SavedExerciseID *string      `json:"savedExerciseId" dynamodbav:"savedExerciseId"`
+	Name            string       `json:"name" dynamodbav:"name"`
+	Order           int          `json:"order" dynamodbav:"order"`
+	Sets            []WorkoutSet `json:"sets" dynamodbav:"sets"`
 }
 
 // Workout is the top-level item stored in DynamoDB.
@@ -29,7 +30,7 @@ type Workout struct {
 	CompletedAt *string           `json:"completedAt" dynamodbav:"completedAt"`
 	Notes       string            `json:"notes" dynamodbav:"notes"`
 	Tags        []string          `json:"tags" dynamodbav:"tags"`
-	BodyWeight  *float32       `json:"bodyWeight" dynamodbav:"bodyWeight"`
+	BodyWeight  *float32          `json:"bodyWeight" dynamodbav:"bodyWeight"`
 	Exercises   []WorkoutExercise `json:"exercises" dynamodbav:"exercises"`
 	CreatedAt   string            `json:"createdAt" dynamodbav:"createdAt"`
 	UpdatedAt   string            `json:"updatedAt" dynamodbav:"updatedAt"`

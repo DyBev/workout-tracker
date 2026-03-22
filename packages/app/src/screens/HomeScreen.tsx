@@ -36,6 +36,10 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     navigation.navigate('WorkoutHistory');
   }, [navigation]);
 
+  const handleSavedExercises = useCallback(() => {
+    navigation.navigate('SavedExercises');
+  }, [navigation]);
+
   const hasActiveWorkout = workoutState.activeWorkout !== null;
 
   return (
@@ -69,6 +73,13 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           title="Workout History"
           variant="secondary"
           onPress={handleViewHistory}
+          containerStyle={styles.actionButton}
+        />
+
+        <Button
+          title="Saved Exercises"
+          variant="secondary"
+          onPress={handleSavedExercises}
           containerStyle={styles.actionButton}
         />
       </View>
