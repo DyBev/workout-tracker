@@ -282,12 +282,6 @@ func validate(w *Workout, userID string) error {
 		}
 	}
 
-	if w.BodyWeight != nil {
-		if w.BodyWeight.Unit != "kg" && w.BodyWeight.Unit != "lbs" {
-			return errors.New("bodyWeight.unit must be \"kg\" or \"lbs\"")
-		}
-	}
-
 	return nil
 }
 

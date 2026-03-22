@@ -1,7 +1,5 @@
 package main
 
-import "encoding/gob"
-
 // WorkoutSet represents a single set within an exercise.
 type WorkoutSet struct {
 	SetID      string   `json:"setId" dynamodbav:"setId"`
