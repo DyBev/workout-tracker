@@ -5,13 +5,13 @@ import {
   TextInput,
   ScrollView,
   Pressable,
-  Alert,
   StyleSheet,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { Button, ConfirmationDialog } from '../components';
+import { ErrorDialog } from '../components/ErrorDialog';
 import { colors } from '../constants/colors';
 import type { ActiveWorkoutScreenProps } from '../types/workout';
 import { TagInput } from '../components/TagInput';
@@ -36,15 +36,37 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   const insets = useSafeAreaInsets();
   const [isCompleting, setIsCompleting] = useState(false);
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
 
   const workout = state.activeWorkout;
 
   const handleComplete = useCallback(async () => {
     if (!workout || workout.exercises.length === 0) {
-      Alert.alert(
-        'No exercises',
-        'Add at least one exercise before finishing.',
-      );
+      setErrorDialog({
+        title: 'No exercises',
+        message: 'Add at least one exercise before finishing.',
+      });
+      setShowErrorDialog(true);
+      return;
+    }
+    if (workout.bodyWeight > 1000) {
+      setErrorDialog({
+        title: 'Invalid body weight',
+        message: 'Body weight must be 1000 kg or less.',
+      });
+      setShowErrorDialog(true);
+      return;
+    }
+    const invalidExercise = workout.exercises.find(
+      (ex) => !ex.sets.some((s) => (s.reps ?? 0) > 0 && s.weight !== 0),
+    );
+    if (invalidExercise) {
+      setErrorDialog({
+        title: 'Invalid exercise',
+        message: `"${invalidExercise.name}" needs at least one set with reps greater than 0 and a weight entered.`,
+      });
+      setShowErrorDialog(true);
       return;
     }
     setIsCompleting(true);
@@ -54,7 +76,10 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
         workoutId: workout.workoutId,
       });
     } catch {
-      Alert.alert('Error', 'Failed to save workout. Please try again.');
+      setErrorDialog({
+        title: 'Error',
+        message: 'Failed to save workout. Please try again.',
+      });
       setIsCompleting(false);
     }
   }, [workout, completeWorkout, navigation]);
@@ -166,6 +191,17 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
         onConfirm={handleConfirmDiscard}
         onCancel={handleCancelDiscard}
       />
+
+      {showErrorDialog && <ErrorDialog
+        visible={errorDialog !== null}
+        title={errorDialog?.title ?? ''}
+        message={errorDialog?.message ?? ''}
+        onDismiss={() => {
+          setShowErrorDialog(false);
+          setErrorDialog(null)
+        }}
+      />
+      }
     </View>
   );
 }

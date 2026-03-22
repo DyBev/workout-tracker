@@ -1,5 +1,7 @@
 package main
 
+import "encoding/gob"
+
 // WorkoutSet represents a single set within an exercise.
 type WorkoutSet struct {
 	SetID      string   `json:"setId" dynamodbav:"setId"`
@@ -17,12 +19,6 @@ type WorkoutExercise struct {
 	Sets       []WorkoutSet `json:"sets" dynamodbav:"sets"`
 }
 
-// BodyWeight records the user's body weight at the time of the workout.
-type BodyWeight struct {
-	Value float64 `json:"value" dynamodbav:"value"`
-	Unit  string  `json:"unit" dynamodbav:"unit"`
-}
-
 // Workout is the top-level item stored in DynamoDB.
 type Workout struct {
 	// Partition key — user identifier.
@@ -35,7 +31,7 @@ type Workout struct {
 	CompletedAt *string           `json:"completedAt" dynamodbav:"completedAt"`
 	Notes       string            `json:"notes" dynamodbav:"notes"`
 	Tags        []string          `json:"tags" dynamodbav:"tags"`
-	BodyWeight  *BodyWeight       `json:"bodyWeight" dynamodbav:"bodyWeight"`
+	BodyWeight  *float32       `json:"bodyWeight" dynamodbav:"bodyWeight"`
 	Exercises   []WorkoutExercise `json:"exercises" dynamodbav:"exercises"`
 	CreatedAt   string            `json:"createdAt" dynamodbav:"createdAt"`
 	UpdatedAt   string            `json:"updatedAt" dynamodbav:"updatedAt"`
