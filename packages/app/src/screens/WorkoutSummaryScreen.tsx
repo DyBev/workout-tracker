@@ -116,6 +116,13 @@ export function WorkoutSummaryScreen({
           </View>
         )}
 
+        {workout.bodyWeight > 0 && (
+          <View style={styles.volumeCard}>
+            <Text style={styles.volumeLabel}>Body Weight</Text>
+            <Text style={styles.volumeValue}>{workout.bodyWeight} kg</Text>
+          </View>
+        )}
+
         {workout.notes ? (
           <View style={styles.notesCard}>
             <Text style={styles.notesLabel}>Notes</Text>

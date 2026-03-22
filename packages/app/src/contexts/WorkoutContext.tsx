@@ -10,7 +10,6 @@ import * as workoutStorage from '../services/workoutStorage';
 import * as workoutApi from '../services/workoutApi';
 import { useAuth } from './AuthContext';
 import type {
-  BodyWeight,
   Workout,
   WorkoutAction,
   WorkoutContextValue,
@@ -135,7 +134,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       completedAt: null,
       notes: '',
       tags: [],
-      bodyWeight: null,
+      bodyWeight: 0,
       exercises: [],
       createdAt: now,
       updatedAt: now,
@@ -261,7 +260,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   );
 
   const updateBodyWeight = useCallback(
-    (bodyWeight: BodyWeight | null) => {
+    (bodyWeight: number) => {
       updateActiveWorkout((workout) => ({ ...workout, bodyWeight }));
     },
     [updateActiveWorkout],

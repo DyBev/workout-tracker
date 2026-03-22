@@ -17,6 +17,7 @@ import type { ActiveWorkoutScreenProps } from '../types/workout';
 import { TagInput } from '../components/TagInput';
 import { AddExerciseRow } from '../components/AddExercise';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { BodyWeightInput } from '../components/BodyWeightInput';
 
 export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   const {
@@ -28,6 +29,7 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
     updateSet,
     updateNotes,
     updateTags,
+    updateBodyWeight,
     completeWorkout,
     discardWorkout,
   } = useWorkout();
@@ -119,6 +121,11 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
           onChangeText={updateNotes}
           multiline
           accessibilityLabel="Workout notes"
+        />
+
+        <BodyWeightInput
+          value={workout.bodyWeight}
+          onChangeValue={updateBodyWeight}
         />
 
         <TagInput tags={workout.tags} onUpdateTags={updateTags} />

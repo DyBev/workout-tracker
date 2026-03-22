@@ -15,11 +15,6 @@ export interface WorkoutExercise {
   sets: WorkoutSet[];
 }
 
-export interface BodyWeight {
-  value: number;
-  unit: 'kg' | 'lbs';
-}
-
 export type SyncStatus = 'pending' | 'synced';
 
 export interface Workout {
@@ -29,7 +24,7 @@ export interface Workout {
   completedAt: string | null;
   notes: string;
   tags: string[];
-  bodyWeight: BodyWeight | null;
+  bodyWeight: number;
   exercises: WorkoutExercise[];
   createdAt: string;
   updatedAt: string;
@@ -94,7 +89,7 @@ export interface WorkoutContextValue {
   ) => void;
   updateNotes: (notes: string) => void;
   updateTags: (tags: string[]) => void;
-  updateBodyWeight: (bodyWeight: BodyWeight | null) => void;
+  updateBodyWeight: (weight: number) => void;
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   syncWorkouts: (workouts?: Workout[]) => Promise<void>;
