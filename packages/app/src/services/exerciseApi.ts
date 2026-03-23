@@ -3,6 +3,15 @@ import type { SavedExercise } from '../types/workout';
 
 const baseUrl = process.env.EXPO_PUBLIC_API_DOMAIN;
 
+export interface SaveExercisesResult {
+  success: boolean;
+  status: number;
+  results: {
+    savedExerciseId: string;
+    status: 'saved' | 'error';
+  }[];
+}
+
 export async function readExercises(): Promise<{ exercises: SavedExercise[] }> {
   try {
     const session = await getCurrentSession();
@@ -29,11 +38,11 @@ export async function readExercises(): Promise<{ exercises: SavedExercise[] }> {
 
 export async function saveExercises(
   exercises: SavedExercise | SavedExercise[],
-): Promise<{ success: boolean; status: number }> {
+): Promise<SaveExercisesResult> {
   try {
     const session = await getCurrentSession();
     if (!session) {
-      return { success: false, status: 401 };
+      return { success: false, status: 401, results: [] };
     }
 
     const response = await fetch(`${baseUrl}/exercises/save`, {
@@ -45,12 +54,16 @@ export async function saveExercises(
       body: JSON.stringify(Array.isArray(exercises) ? exercises : [exercises]),
     });
 
+    const responseData = await response.json();
+    const results = responseData.results;
+
     return {
       success: response.status === 201,
       status: response.status,
+      results,
     };
   } catch {
-    return { success: false, status: 0 };
+    return { success: false, status: 0, results: [] };
   }
 }
 

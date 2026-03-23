@@ -40,6 +40,7 @@ export interface SavedExercise {
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  syncStatus: SyncStatus;
 }
 
 export type AppStackParamList = {
@@ -124,6 +125,7 @@ export interface WorkoutContextValue {
 export interface SavedExerciseState {
   savedExercises: SavedExercise[];
   isLoading: boolean;
+  failedSyncIds: Set<string>;
 }
 
 export type SavedExerciseAction =
@@ -131,7 +133,9 @@ export type SavedExerciseAction =
   | { type: 'ADD_EXERCISE'; exercise: SavedExercise }
   | { type: 'UPDATE_EXERCISE'; exercise: SavedExercise }
   | { type: 'ARCHIVE_EXERCISE'; savedExerciseId: string; archivedAt: string }
-  | { type: 'RESTORE_EXERCISE'; savedExerciseId: string };
+  | { type: 'RESTORE_EXERCISE'; savedExerciseId: string }
+  | { type: 'MARK_SYNCED'; savedExerciseIds: string[] }
+  | { type: 'MARK_SYNC_FAILED'; savedExerciseIds: string[] };
 
 export interface ExerciseContextValue {
   savedExercises: SavedExercise[];
@@ -142,4 +146,5 @@ export interface ExerciseContextValue {
   archiveExercise: (savedExerciseId: string) => Promise<void>;
   restoreExercise: (savedExerciseId: string) => Promise<void>;
   getById: (savedExerciseId: string | null) => SavedExercise | undefined;
+  syncExercises: (exercises?: SavedExercise[]) => Promise<void>;
 }

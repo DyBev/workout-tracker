@@ -9,6 +9,7 @@ import React, {
 import * as workoutStorage from '../services/workoutStorage';
 import * as workoutApi from '../services/workoutApi';
 import { useAuth } from './AuthContext';
+import { useExercise } from './ExerciseContext';
 import type {
   Workout,
   WorkoutAction,
@@ -74,6 +75,7 @@ interface WorkoutProviderProps {
 export function WorkoutProvider({ children }: WorkoutProviderProps) {
   const [state, dispatch] = useReducer(workoutReducer, initialState);
   const { state: authState } = useAuth();
+  const { syncExercises } = useExercise();
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -340,7 +342,8 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     dispatch({ type: 'COMPLETE_WORKOUT', workout: completed });
 
     syncWorkouts([completed]).catch(() => {});
-  }, [state.activeWorkout, syncWorkouts]);
+    syncExercises().catch(() => {});
+  }, [state.activeWorkout, syncWorkouts, syncExercises]);
 
   const discardWorkout = useCallback(async () => {
     await workoutStorage.clearActiveWorkout();

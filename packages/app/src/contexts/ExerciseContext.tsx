@@ -22,6 +22,7 @@ function generateId(): string {
 const initialState: SavedExerciseState = {
   savedExercises: [],
   isLoading: true,
+  failedSyncIds: new Set(),
 };
 
 function exerciseReducer(
@@ -63,6 +64,22 @@ function exerciseReducer(
             : e,
         ),
       };
+    case 'MARK_SYNCED':
+      return {
+        ...state,
+        savedExercises: state.savedExercises.map((e) =>
+          action.savedExerciseIds.includes(e.savedExerciseId)
+            ? { ...e, syncStatus: 'synced' as const }
+            : e,
+        ),
+      };
+    case 'MARK_SYNC_FAILED': {
+      const nextFailed = new Set(state.failedSyncIds);
+      for (const id of action.savedExerciseIds) {
+        nextFailed.add(id);
+      }
+      return { ...state, failedSyncIds: nextFailed };
+    }
     default:
       return state;
   }
@@ -77,30 +94,81 @@ interface ExerciseProviderProps {
 export function ExerciseProvider({ children }: ExerciseProviderProps) {
   const [state, dispatch] = useReducer(exerciseReducer, initialState);
 
+  const syncExercises = useCallback(
+    async (exercises?: SavedExercise[]) => {
+      const toSync =
+        exercises ??
+        state.savedExercises.filter(
+          (e) =>
+            e.syncStatus !== 'synced' &&
+            !state.failedSyncIds.has(e.savedExerciseId),
+        );
+
+      if (toSync.length === 0) return;
+
+      const result = await exerciseApi.saveExercises(toSync);
+
+      const ids = result.results
+        .filter((e) => e.status === 'saved')
+        .map((e) => e.savedExerciseId);
+
+      if (result.success) {
+        dispatch({ type: 'MARK_SYNCED', savedExerciseIds: ids });
+        await exerciseStorage.deletePendingExercises(ids);
+
+        // Update local saved cache to reflect synced status
+        const cached = await exerciseStorage.getSavedExercises();
+        const idSet = new Set(ids);
+        const updatedCache = cached.map((e) =>
+          idSet.has(e.savedExerciseId) ? { ...e, syncStatus: 'synced' as const } : e,
+        );
+        await exerciseStorage.setSavedExercises(updatedCache);
+      } else {
+        dispatch({ type: 'MARK_SYNC_FAILED', savedExerciseIds: ids });
+      }
+    },
+    [state.savedExercises, state.failedSyncIds],
+  );
+
   useEffect(() => {
     async function restore() {
       try {
-        // Try API first, fall back to local storage
-        const apiResult = await exerciseApi.readExercises();
-        if (apiResult.exercises.length > 0) {
-          dispatch({ type: 'LOAD_EXERCISES', exercises: apiResult.exercises });
-          // Update local cache
-          await exerciseStorage.setSavedExercises(apiResult.exercises);
-          return;
+        const [pending, apiResult] = await Promise.all([
+          exerciseStorage.getPendingExercises(),
+          exerciseApi.readExercises(),
+        ]);
+
+        const apiMap = new Map<string, SavedExercise>(
+          apiResult.exercises.map((e) => [e.savedExerciseId, { ...e, syncStatus: 'synced' as const }]),
+        );
+
+        for (const e of pending) {
+          if (!apiMap.has(e.savedExerciseId)) {
+            apiMap.set(e.savedExerciseId, e);
+          }
+        }
+
+        const merged = Array.from(apiMap.values());
+        dispatch({ type: 'LOAD_EXERCISES', exercises: merged });
+
+        // Update local cache with the merged result
+        await exerciseStorage.setSavedExercises(merged);
+
+        if (pending.length > 0) {
+          syncExercises(pending).catch(() => {});
         }
       } catch {
-        // API unavailable — fall through to local storage
-      }
-
-      try {
-        const exercises = await exerciseStorage.getSavedExercises();
-        dispatch({ type: 'LOAD_EXERCISES', exercises });
-      } catch {
-        dispatch({ type: 'LOAD_EXERCISES', exercises: [] });
+        // API unavailable — fall back to local storage
+        try {
+          const exercises = await exerciseStorage.getSavedExercises();
+          dispatch({ type: 'LOAD_EXERCISES', exercises });
+        } catch {
+          dispatch({ type: 'LOAD_EXERCISES', exercises: [] });
+        }
       }
     }
     restore();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveExercise = useCallback(
     (name: string): SavedExercise => {
@@ -113,10 +181,10 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
         archivedAt: null,
         createdAt: now,
         updatedAt: now,
+        syncStatus: 'pending',
       };
       dispatch({ type: 'ADD_EXERCISE', exercise });
-      exerciseStorage.saveExercise(exercise).catch(() => {});
-      exerciseApi.saveExercises(exercise).catch(() => {});
+      exerciseStorage.savePendingExercise(exercise).catch(() => {});
       return exercise;
     },
     [],
@@ -124,10 +192,13 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
 
   const updateExercise = useCallback(
     async (exercise: SavedExercise): Promise<void> => {
-      const updated = { ...exercise, updatedAt: new Date().toISOString() };
+      const updated: SavedExercise = {
+        ...exercise,
+        updatedAt: new Date().toISOString(),
+        syncStatus: 'pending',
+      };
       dispatch({ type: 'UPDATE_EXERCISE', exercise: updated });
-      await exerciseStorage.updateExercise(updated);
-      exerciseApi.saveExercises(updated).catch(() => {});
+      await exerciseStorage.savePendingExercise(updated);
     },
     [],
   );
@@ -136,11 +207,12 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
     async (savedExerciseId: string): Promise<void> => {
       const now = new Date().toISOString();
       dispatch({ type: 'ARCHIVE_EXERCISE', savedExerciseId, archivedAt: now });
-      // Update local storage — find the exercise and set archivedAt
+
       const exercises = await exerciseStorage.getSavedExercises();
       const exercise = exercises.find((e) => e.savedExerciseId === savedExerciseId);
       if (exercise) {
-        await exerciseStorage.updateExercise({ ...exercise, archivedAt: now, updatedAt: now });
+        const updated: SavedExercise = { ...exercise, archivedAt: now, updatedAt: now, syncStatus: 'synced' };
+        await exerciseStorage.updateExercise(updated);
       }
       exerciseApi.archiveExercise(savedExerciseId, true).catch(() => {});
     },
@@ -151,11 +223,12 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
     async (savedExerciseId: string): Promise<void> => {
       const now = new Date().toISOString();
       dispatch({ type: 'RESTORE_EXERCISE', savedExerciseId });
-      // Update local storage — find the exercise and clear archivedAt
+
       const exercises = await exerciseStorage.getSavedExercises();
       const exercise = exercises.find((e) => e.savedExerciseId === savedExerciseId);
       if (exercise) {
-        await exerciseStorage.updateExercise({ ...exercise, archivedAt: null, updatedAt: now });
+        const updated: SavedExercise = { ...exercise, archivedAt: null, updatedAt: now, syncStatus: 'synced' };
+        await exerciseStorage.updateExercise(updated);
       }
       exerciseApi.archiveExercise(savedExerciseId, false).catch(() => {});
     },
@@ -188,6 +261,7 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
       archiveExercise,
       restoreExercise,
       getById,
+      syncExercises,
     }),
     [
       savedExercises,
@@ -198,6 +272,7 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
       archiveExercise,
       restoreExercise,
       getById,
+      syncExercises,
     ],
   );
 
