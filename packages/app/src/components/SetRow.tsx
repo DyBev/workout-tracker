@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, Platform, StyleSheet } from 'react-native';
 import { colors } from '../constants/colors';
 import { WorkoutSet } from '../types/workout';
+import { ConfirmationDialog } from './ConfirmationDialog';
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -20,6 +21,7 @@ export function SetRow({ set, exerciseId, onUpdateSet, onRemoveSet }: SetRowProp
     set.weight !== null ? String(set.weight) : '',
   );
   const isWeightFocused = useRef(false);
+  const [showConfirmRemoveSet, setShowConfirmRemoveSet] = useState(false);
 
   useEffect(() => {
     if (!isWeightFocused.current) {
@@ -104,13 +106,22 @@ export function SetRow({ set, exerciseId, onUpdateSet, onRemoveSet }: SetRowProp
       />
       <Text style={styles.unitLabel}>kg</Text>
       <Pressable
-        onPress={handleRemove}
+        onPress={() => setShowConfirmRemoveSet(true)}
         accessibilityRole="button"
         accessibilityLabel={`Remove set ${set.order}`}
         style={styles.removeSetButton}
       >
         <Text style={styles.removeSetText}>X</Text>
       </Pressable>
+
+      <ConfirmationDialog
+        visible={showConfirmRemoveSet}
+        title='Confirm to remove set'
+        message={`Remove set ${set.order}`}
+        onCancel={() => setShowConfirmRemoveSet(false)}
+        onConfirm={handleRemove}
+      />
+
     </View>
   );
 }

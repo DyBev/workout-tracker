@@ -20,6 +20,7 @@ import { TagInput } from '../components/TagInput';
 import { AddExerciseRow } from '../components/AddExercise';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { BodyWeightInput } from '../components/BodyWeightInput';
+import { ChevronLeft } from '@carbon/icons-react';
 
 export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   const {
@@ -160,9 +161,22 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
 
   const elapsed = formatElapsed(workout.startedAt);
 
+  const handleGoHome = useCallback(() => {
+    navigation.navigate('Home');
+  }, [navigation]);
+
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
+        <Pressable
+          onPress={handleGoHome}
+          accessibilityRole="button"
+          accessibilityLabel="Discard workout"
+          style={styles.discardButton}
+        >
+          <ChevronLeft size={32} />
+        </Pressable>
         <View>
           <Text style={styles.title} accessibilityRole="header">
             Workout

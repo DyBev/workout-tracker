@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { SetRow } from './SetRow';
 import { colors } from '../constants/colors';
 import { DocumentAttachment, Star, StarFilled } from '@carbon/icons-react';
+import { ConfirmationDialog } from './ConfirmationDialog';
 
 interface ExerciseCardProps {
   exercise: WorkoutExercise;
@@ -37,6 +38,7 @@ export function ExerciseCard({
   const [showNotePopover, setShowNotePopover] = useState(false);
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState(exercise.note ?? '');
+  const [showConfirmRemoveExercise, setShowConfirmRemoveExercise] = useState(false);
 
   useEffect(() => {
     setNoteText(exercise.note ?? '');
@@ -83,7 +85,7 @@ export function ExerciseCard({
           {exercise.name}
         </Text>
         <Pressable
-          onPress={handleRemoveExercise}
+          onPress={() => setShowConfirmRemoveExercise(true)}
           accessibilityRole="button"
           accessibilityLabel={`Remove ${exercise.name}`}
           style={styles.removeExerciseButton}
@@ -169,6 +171,14 @@ export function ExerciseCard({
           accessibilityLabel={`Add note for ${exercise.name}`}
         />
       )}
+
+      <ConfirmationDialog
+        visible={showConfirmRemoveExercise}
+        title='Confirm to remove Exercise'
+        message={`Remove ${exercise.name}`}
+        onCancel={() => setShowConfirmRemoveExercise(false)}
+        onConfirm={handleRemoveExercise}
+      />
 
       <Modal
         visible={showNotePopover}
