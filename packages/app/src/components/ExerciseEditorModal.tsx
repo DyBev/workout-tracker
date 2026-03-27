@@ -33,7 +33,7 @@ export function ExerciseEditorModal({
   const [note, setNote] = useState(exercise.note);
   const [tags, setTags] = useState<string[]>(exercise.tags);
 
-  // Reset local state when exercise changes
+  
   React.useEffect(() => {
     setName(exercise.name);
     setNote(exercise.note);

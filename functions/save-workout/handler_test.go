@@ -32,17 +32,15 @@ func (m *mockDynamo) BatchWriteItem(ctx context.Context, params *dynamodb.BatchW
 func validWorkoutJSON() string {
 	reps := 10
 	weight := 80.0
+	bw := float32(75.5)
 	w := Workout{
-		UserID:    "user-123",
-		SK:        "WORKOUT#2026-03-14T10:00:00.000Z#wkt-abc",
-		WorkoutID: "wkt-abc",
-		StartedAt: "2026-03-14T10:00:00.000Z",
-		Notes:     "Great session",
-		Tags:      []string{"push", "chest"},
-		BodyWeight: &BodyWeight{
-			Value: 75.5,
-			Unit:  "kg",
-		},
+		UserID:     "user-123",
+		SK:         "WORKOUT#2026-03-14T10:00:00.000Z#wkt-abc",
+		WorkoutID:  "wkt-abc",
+		StartedAt:  "2026-03-14T10:00:00.000Z",
+		Notes:      "Great session",
+		Tags:       []string{"push", "chest"},
+		BodyWeight: &bw,
 		Exercises: []WorkoutExercise{
 			{
 				ExerciseID: "ex-1",

@@ -16,6 +16,7 @@ type WorkoutExercise struct {
 	Name            string       `json:"name" dynamodbav:"name"`
 	Order           int          `json:"order" dynamodbav:"order"`
 	Sets            []WorkoutSet `json:"sets" dynamodbav:"sets"`
+	Note            *string      `json:"note" dynamodbav:"note"`
 }
 
 // Workout is the top-level item stored in DynamoDB.

@@ -130,9 +130,12 @@ export function WorkoutSummaryScreen({
           </View>
         ) : null}
 
-        {workout.exercises.map((exercise) => (
+        {workout.exercises.map((exercise) => {
+          console.log(exercise);
+          return(
           <View key={exercise.exerciseId} style={styles.exerciseSection}>
             <Text style={styles.exerciseName}>{exercise.name}</Text>
+            {exercise?.note && <Text>{exercise.note}</Text>}
             {exercise.sets.map((set) => (
               <View key={set.setId} style={styles.setRow}>
                 <Text style={styles.setOrder}>Set {set.order}</Text>
@@ -143,7 +146,7 @@ export function WorkoutSummaryScreen({
               </View>
             ))}
           </View>
-        ))}
+        )})}
 
         <Pressable
           onPress={handleDone}

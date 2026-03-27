@@ -33,6 +33,7 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
     updateNotes,
     updateTags,
     updateBodyWeight,
+    updateExerciseNote,
     completeWorkout,
     discardWorkout,
   } = useWorkout();
@@ -223,6 +224,7 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
               onEditExercise={(savedEx) =>
                 handleEditExercise(exercise.exerciseId, savedEx)
               }
+              onUpdateNote={(id, note) => updateExerciseNote(id, note)}
             />
           );
         })}

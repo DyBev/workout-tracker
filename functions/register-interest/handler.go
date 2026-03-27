@@ -100,13 +100,13 @@ func (h *Handler) createUser(ctx context.Context, email string) error {
 }
 
 func parseRequest(body string) (RegisterRequest, error) {
-	
-	decodedBytes, err := base64.StdEncoding.DecodeString(body);
+
+	decodedBytes, err := base64.StdEncoding.DecodeString(body)
 	if err != nil {
 		fmt.Printf("Error decoding base64 string: %v\n", err)
 		return RegisterRequest{}, errors.New("decoding base64 string")
 	}
-	decodedBody := string(decodedBytes);
+	decodedBody := string(decodedBytes)
 
 	trimmed := strings.TrimSpace(decodedBody)
 	if trimmed == "" {

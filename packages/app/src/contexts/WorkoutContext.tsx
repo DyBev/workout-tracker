@@ -266,6 +266,21 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     [updateActiveWorkout],
   );
 
+  const updateExerciseNote = useCallback(
+    (exerciseId: string, note: string | null) => {
+      updateActiveWorkout((workout) => {
+        const exercises = workout.exercises.map((exercise) =>
+          exercise.exerciseId === exerciseId ? { ...exercise, note: note ?? undefined } : exercise,
+        );
+        const updated = { ...workout, exercises };
+        // persist immediately so a subsequent save uses the latest value
+        workoutStorage.saveActiveWorkout(updated).catch(() => {});
+        return updated;
+      });
+    },
+    [updateActiveWorkout],
+  );
+
   const updateNotes = useCallback(
     (notes: string) => {
       updateActiveWorkout((workout) => ({ ...workout, notes }));
@@ -328,6 +343,9 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
 
   const completeWorkout = useCallback(async () => {
     if (!state.activeWorkout) return;
+    // yield to the event loop so any pending state updates (e.g. note edits)
+    // have a chance to flush before we snapshot the active workout.
+    await Promise.resolve();
 
     const now = new Date().toISOString();
     const completed: Workout = {
@@ -365,6 +383,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       updateNotes,
       updateTags,
       updateBodyWeight,
+      updateExerciseNote,
       completeWorkout,
       discardWorkout,
       syncWorkouts,
@@ -382,6 +401,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       updateNotes,
       updateTags,
       updateBodyWeight,
+      updateExerciseNote,
       completeWorkout,
       discardWorkout,
       syncWorkouts,

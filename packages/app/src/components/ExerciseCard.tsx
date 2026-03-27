@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { WorkoutExercise, SavedExercise } from '../types/workout';
-import { View, Text, Pressable, Modal, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet, Platform, TextInput } from 'react-native';
 import { Button } from './Button';
 import { SetRow } from './SetRow';
 import { colors } from '../constants/colors';
@@ -20,6 +20,7 @@ interface ExerciseCardProps {
   onRemoveExercise: (exerciseId: string) => void;
   onSaveExercise: (name: string) => void;
   onEditExercise: (savedExercise: SavedExercise) => void;
+  onUpdateNote: (exerciseId: string, note: string | null) => void;
 }
 
 export function ExerciseCard({
@@ -31,8 +32,15 @@ export function ExerciseCard({
   onRemoveExercise,
   onSaveExercise,
   onEditExercise,
+  onUpdateNote,
 }: ExerciseCardProps) {
   const [showNotePopover, setShowNotePopover] = useState(false);
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState(exercise.note ?? '');
+
+  useEffect(() => {
+    setNoteText(exercise.note ?? '');
+  }, [exercise.note]);
 
   const handleAddSet = useCallback(() => {
     onAddSet(exercise.exerciseId);
@@ -55,7 +63,7 @@ export function ExerciseCard({
   }, []);
 
   const isSaved = !!savedExercise;
-  const hasNote = !!(savedExercise?.note);
+  const hasNote = !!(exercise.note);
 
   return (
     <View style={styles.exerciseCard}>
@@ -114,12 +122,53 @@ export function ExerciseCard({
         />
       ))}
 
-      <Button
-        title="+ Add Set"
-        variant="link"
-        onPress={handleAddSet}
-        containerStyle={styles.addSetButton}
-      />
+      <View style={styles.buttonRow}>
+        <Button
+          title="+ Add Set"
+          variant="link"
+          onPress={handleAddSet}
+          containerStyle={styles.addSetButton}
+        />
+        {!showNoteInput && (
+          <Button
+            title="+ Add Note"
+            variant="link"
+            onPress={() => setShowNoteInput(true)}
+            containerStyle={styles.addSetButton}
+          />
+        )}
+      </View>
+
+      {showNoteInput && (
+        <TextInput
+          style={[
+            styles.noteInput,
+            Platform.OS === 'web' && { outlineStyle: 'none' as unknown as undefined },
+          ]}
+          value={noteText}
+          onChangeText={(t) => {
+            setNoteText(t);
+            // persist immediately so parent save includes the latest text
+            onUpdateNote(exercise.exerciseId, t === '' ? null : t);
+          }}
+          placeholder="Add a note..."
+          placeholderTextColor={colors.primary.grey}
+          autoFocus
+          onBlur={() => {
+            const trimmed = noteText ? noteText.trim() : '';
+            if (!trimmed) {
+              setNoteText('');
+              setShowNoteInput(false);
+              onUpdateNote(exercise.exerciseId, null);
+              return;
+            }
+            onUpdateNote(exercise.exerciseId, trimmed);
+            setNoteText(trimmed);
+            setShowNoteInput(false);
+          }}
+          accessibilityLabel={`Add note for ${exercise.name}`}
+        />
+      )}
 
       {/* Note Popover */}
       <Modal
@@ -144,7 +193,7 @@ export function ExerciseCard({
                 <Text style={styles.popoverCloseText}>Close</Text>
               </Pressable>
             </View>
-            <Text style={styles.popoverText}>{savedExercise?.note}</Text>
+            <Text style={styles.popoverText}>{exercise.note}</Text>
           </View>
         </Pressable>
       </Modal>
@@ -257,7 +306,23 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 4,
   },
-  // Note popover styles
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: colors.primary.greyLight,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+    marginTop: 8,
+    
+  },
+  
   popoverOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

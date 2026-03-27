@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"math"
 	"net/http"
 	"strings"
@@ -17,9 +18,10 @@ import (
 )
 
 const (
-	maxBatchSize = 25
-	maxRetries = 3
-	baseRetryDelay = 100 * time.Millisecond
+	maxBatchSize       = 25
+	maxRetries         = 3
+	baseRetryDelay     = 100 * time.Millisecond
+	exerciseNoteMaxLen = 1000
 )
 
 // DynamoBatchWriter is the subset of the DynamoDB client that this handler needs.
@@ -49,13 +51,13 @@ func (h *Handler) HandleRequest(
 		return response(http.StatusInternalServerError, errorBody("table name not configured")), nil
 	}
 
-	var userID string;
+	var userID string
 	if req.RequestContext.Authorizer != nil {
-		jwt, ok := req.RequestContext.Authorizer["jwt"];
+		jwt, ok := req.RequestContext.Authorizer["jwt"]
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
-		claims, ok := jwt.(map[string]any)["claims"];
+		claims, ok := jwt.(map[string]any)["claims"]
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
@@ -247,7 +249,7 @@ func generateSK(w *Workout) {
 
 func validate(w *Workout, userID string) error {
 	var missing []string
-	w.UserID = userID;
+	w.UserID = userID
 
 	if w.WorkoutID == "" {
 		missing = append(missing, "workoutId")
@@ -274,6 +276,19 @@ func validate(w *Workout, userID string) error {
 		}
 		if ex.Name == "" {
 			return fmt.Errorf("exercises[%d]: missing name", i)
+		}
+
+		if ex.Note != nil {
+			trimmed := strings.TrimSpace(*ex.Note)
+			if trimmed == "" {
+				w.Exercises[i].Note = nil
+			} else if len(trimmed) > exerciseNoteMaxLen {
+				return fmt.Errorf("exercises[%d].note: max length %d", i, exerciseNoteMaxLen)
+			} else {
+				escaped := html.EscapeString(trimmed)
+				s := escaped
+				w.Exercises[i].Note = &s
+			}
 		}
 		for j, s := range ex.Sets {
 			if s.SetID == "" {

@@ -100,7 +100,7 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
   }, []);
 
   const handleBlur = useCallback(() => {
-    // Delay hiding so a tap on a suggestion can register
+    
     setTimeout(() => setShowSuggestions(false), 150);
   }, []);
 

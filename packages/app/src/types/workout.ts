@@ -14,6 +14,7 @@ export interface WorkoutExercise {
   name: string;
   order: number;
   sets: WorkoutSet[];
+  note?: string;
 }
 
 export type SyncStatus = 'pending' | 'synced';
@@ -114,6 +115,7 @@ export interface WorkoutContextValue {
     exerciseId: string,
     savedExerciseId: string,
   ) => void;
+  updateExerciseNote: (exerciseId: string, note: string | null) => void;
   updateNotes: (notes: string) => void;
   updateTags: (tags: string[]) => void;
   updateBodyWeight: (weight: number) => void;
