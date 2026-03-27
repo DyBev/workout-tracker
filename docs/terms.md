@@ -26,10 +26,10 @@ You agree to:
 You are responsible for activity that occurs under your account.
 
 We may suspend or terminate accounts that:
-- Violate these terms
-- Abuse the service
-- Attempt to interfere with the platform
-- Are involved in fraudulent activity
+- Violate these terms.
+- Abuse the service.
+- Attempt to interfere with the platform.
+- Are involved in fraudulent activity.
 
 ---
 
@@ -39,13 +39,23 @@ Workout Tracker offers both a free tier and a paid subscription.
 
 ### Free tier
 
-The free tier includes:
-- Up to 30 workout recordings
-- 3 saved workout templates
+We design the free tier to provide a meaningful, usable experience without requiring payment details. The free tier includes:
+- Up to 60 workout recordings (cloud-synced).
+- Up to 10 saved exercises.
 
 No payment details are required to use the free tier.
 
-If you exceed these limits, you will need an active subscription to continue recording new workouts.
+If you exceed these cloud limits you can continue to use the app locally; to save additional workouts or exercises to cloud storage you will need an active subscription.
+
+### Paid tier
+
+There is a single paid tier available. If additional paid tiers are introduced in the future, current subscribers may be moved to an equivalent or higher tier at no extra cost ("grandfathered"). Grandfathered status is lost if you cancel your subscription; if you later re-subscribe, the then-current tier and pricing will apply.
+
+Paid tier users may save an unlimited number of exercises. Paid-tier users' workouts are automatically synced to cloud storage and available across devices.
+
+When you subscribe, any workouts that were stored only locally and exceeded the free tier's cloud limits will be uploaded to your account's cloud storage on your next sign-in.
+
+While we use reasonable measures to protect and preserve your data, we cannot guarantee against loss or unavailability caused by events outside our control (for example, third-party provider outages or catastrophic failures). We encourage you to export backups if you require additional redundancy; contact support for help exporting your data.
 
 ---
 
@@ -58,7 +68,7 @@ You can cancel your subscription at any time. When you cancel, your access conti
 - Cancellations take effect at the end of your current billing period, not immediately.
 - You keep full access to paid features until that date.
 - You can cancel through the **Manage Subscription** option in your account settings, which opens the Stripe Customer Portal.
-- No partial refunds are issued for unused time within a billing period.
+- No partial refunds are issued for unused time within a billing period, unless otherwise required by law.
 - After your subscription ends, your account reverts to the free tier. Your data is retained and accessible under free-tier limits.
 
 ### Refunds
@@ -79,13 +89,13 @@ You agree not to:
 - Reverse engineer or exploit the service.
 - Use automated systems to abuse or overload the platform.
 - Use the service for illegal activities.
-- Interfere with other users’ access to the service.
+- Interfere with other users' access to the service.
 
 ---
 
 ## 6. Service Availability
 
-Workout Tracker is provided on an **"as is"** basis.
+Workout Tracker is provided on an "as is" basis.
 
 We aim to keep the service available and reliable, but we do not guarantee uninterrupted access.
 
@@ -98,10 +108,10 @@ Because the app is designed to be offline-first, you may still be able to record
 To the fullest extent permitted by law:
 
 Workout Tracker is not liable for:
-- Loss of data
-- Loss of profits
-- Service interruptions
-- Indirect or consequential damages
+- Loss of data.
+- Loss of profits.
+- Service interruptions.
+- Indirect or consequential damages.
 
 Our total liability arising from the use of the service will not exceed the amount you have paid for the service in the previous 12 months.
 
