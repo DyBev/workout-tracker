@@ -1,0 +1,10 @@
+# robots.txt - Workout Tracker
+# Disallow only the site root (/) while allowing other pages.
+# Note: some crawlers may not support the "$" anchor. For strict root non-indexing,
+# also add a meta noindex on the root or protect it server-side.
+
+User-agent: *
+Disallow: /$
+Allow: /
+
+Sitemap: https://workout.dybev.uk/sitemap.xml

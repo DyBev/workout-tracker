@@ -1,0 +1,498 @@
+/* ==========================================================================
+   Workout Tracker - Shared Styles
+   ========================================================================== */
+
+/* --- Reset & Base --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #374151;
+  background: #ffffff;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Layout --- */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+/* --- Navigation --- */
+nav {
+  position: sticky;
+  top: 0;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #d7dadf;
+  z-index: 100;
+  padding: 16px 0;
+}
+nav .container { display: flex; align-items: center; justify-content: space-between; }
+
+.nav-brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+  text-decoration: none;
+}
+.nav-links { display: flex; align-items: center; gap: 24px; }
+.nav-link {
+  color: #717c8e;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-link:hover { color: #000000; }
+.nav-link.active { color: #0f62fe; font-weight: 600; }
+.nav-cta {
+  display: inline-block;
+  background: #0f62fe;
+  color: #ffffff;
+  padding: 10px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+.nav-cta:hover { background: #0043ce; }
+
+/* --- Footer --- */
+footer {
+  background: #000000;
+  color: #9ca3af;
+  padding: 40px 0;
+  text-align: center;
+  font-size: 0.85rem;
+}
+footer a { color: #9ca3af; text-decoration: none; }
+footer a:hover { color: #ffffff; }
+
+/* --- Page Header (shared by roadmap & terms) --- */
+.page-header {
+  padding: 64px 0 48px;
+  text-align: center;
+}
+.page-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 12px;
+}
+.page-header p {
+  font-size: 1.1rem;
+  color: #717c8e;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ==========================================================================
+   Home Page
+   ========================================================================== */
+
+/* Alternate section background */
+main > section:nth-of-type(odd) {
+  background: #f9fafb;
+}
+
+/* --- Section heading (reusable) --- */
+.section-heading {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 12px;
+}
+.section-heading--spaced {
+  margin-bottom: 48px;
+}
+.section-subtitle {
+  text-align: center;
+  color: #717c8e;
+  font-size: 1.05rem;
+  margin-bottom: 48px;
+}
+
+/* --- Section spacing --- */
+.section-padded {
+  padding: 80px 0;
+}
+
+/* --- Hero --- */
+.hero {
+  padding: 80px 0 60px;
+  text-align: center;
+}
+.hero h1 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: #000000;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+.hero h1 span { color: #0f62fe; }
+.hero p {
+  font-size: 1.2rem;
+  max-width: 620px;
+  margin: 0 auto 36px;
+  color: #717c8e;
+}
+.hero-cta {
+  display: inline-block;
+  background: #0f62fe;
+  color: #ffffff;
+  padding: 16px 40px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: background 0.2s;
+}
+.hero-cta:hover { background: #0043ce; }
+.hero-sub {
+  margin-top: 14px !important;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+/* --- Feature cards grid --- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+}
+.card {
+  padding: 32px 28px;
+}
+.card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 8px;
+}
+.card p {
+  color: #717c8e;
+  font-size: 0.95rem;
+}
+
+/* --- Feature icon --- */
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+}
+.card-icon--blue { background: #e6f0ff; color: #0f62fe; }
+.card-icon--green { background: #e6f5ec; color: #198038; }
+.card-icon--grey { background: #f0f1f3; color: #374151; }
+.card-icon--red { background: #fce8e9; color: #da1e28; }
+
+/* --- Steps (how-it-works) --- */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 32px;
+  text-align: center;
+}
+.step-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0f62fe;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.step h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 8px;
+}
+.step p {
+  color: #717c8e;
+  font-size: 0.9rem;
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+/* --- FAQ --- */
+.faq-list {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.faq-item {
+  border-bottom: 1px solid #d7dadf;
+  padding: 20px 0;
+}
+.faq-item:first-child { border-top: 1px solid #d7dadf; }
+.faq-question {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #000000;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  font-family: inherit;
+}
+.faq-question::after {
+  content: '+';
+  font-size: 1.4rem;
+  color: #9ca3af;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+.faq-item.open .faq-question::after {
+  content: '-';
+}
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  color: #717c8e;
+  font-size: 0.95rem;
+}
+.faq-item.open .faq-answer {
+  max-height: 200px;
+  padding-top: 12px;
+}
+
+/* --- CTA Banner --- */
+.cta-banner {
+  padding: 80px 0;
+  text-align: center;
+}
+.cta-banner h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 16px;
+}
+.cta-banner p {
+  color: #717c8e;
+  font-size: 1.05rem;
+  margin-bottom: 32px;
+}
+
+/* --- Register form --- */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.register-form input[type="email"] {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1px solid #d7dadf;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.register-form input[type="email"]:focus {
+  border-color: #0f62fe;
+}
+.register-form button {
+  padding: 14px 28px;
+  background: #0f62fe;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  width: fit-content;
+}
+.register-form button:hover { background: #0043ce; }
+.register-success {
+  color: #198038;
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-top: 8px;
+}
+.register-error {
+  color: #da1e28;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-top: 8px;
+}
+.register-note {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* ==========================================================================
+   Roadmap Page
+   ========================================================================== */
+.roadmap-section {
+  padding: 0 0 80px;
+}
+.roadmap-category {
+  margin-bottom: 48px;
+}
+.roadmap-category:last-child {
+  margin-bottom: 0;
+}
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.category-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.category-badge--planned { background: #e6f0ff; color: #0f62fe; }
+.category-badge--in-progress { background: #fef3c7; color: #92400e; }
+.category-badge--completed { background: #e6f5ec; color: #198038; }
+.category-header h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.feature-list {
+  list-style: none;
+  width: 100%;
+}
+.feature-item {
+  width: 100%;
+  border: 1px solid #d7dadf;
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  background: #ffffff;
+  transition: box-shadow 0.2s;
+}
+.feature-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+.feature-item h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 4px;
+}
+.feature-item p {
+  font-size: 0.9rem;
+  color: #717c8e;
+}
+
+.empty-state {
+  border: 2px dashed #d7dadf;
+  border-radius: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Terms Page
+   ========================================================================== */
+.terms-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+.terms-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 40px 0 16px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+.terms-content h2:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.terms-content h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #000000;
+  margin: 24px 0 8px;
+}
+.terms-content p {
+  color: #374151;
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+.terms-content ul {
+  margin: 0 0 16px 20px;
+  color: #374151;
+  font-size: 0.95rem;
+}
+.terms-content ul li {
+  margin-bottom: 6px;
+}
+.highlight-box {
+  background: #f0f5ff;
+  border-left: 4px solid #0f62fe;
+  padding: 16px 20px;
+  border-radius: 0 6px 6px 0;
+  margin: 20px 0;
+}
+.highlight-box p {
+  margin-bottom: 0;
+  color: #1d2939;
+  font-weight: 500;
+}
+.text-meta {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  margin-bottom: 32px;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* Home */
+  .hero h1 { font-size: 2rem; }
+  .hero p { font-size: 1rem; }
+  .section-heading { font-size: 1.6rem; }
+  .cta-banner h2 { font-size: 1.6rem; }
+  .hero { padding: 48px 0 40px; }
+  .section-padded,
+  .cta-banner { padding: 56px 0; }
+  .register-form { flex-direction: column; }
+
+  /* Roadmap & Terms */
+  .page-header h1 { font-size: 1.8rem; }
+  .page-header { padding: 40px 0 32px; }
+  .roadmap-section { padding-bottom: 56px; }
+  .terms-content { padding-bottom: 56px; }
+  .nav-links { gap: 16px; }
+}
