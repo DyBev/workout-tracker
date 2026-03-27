@@ -50,7 +50,6 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
 
-  // Exercise editor modal state
   const [editorExercise, setEditorExercise] = useState<SavedExercise | null>(null);
   const [editorWorkoutExerciseId, setEditorWorkoutExerciseId] = useState<string | null>(null);
 

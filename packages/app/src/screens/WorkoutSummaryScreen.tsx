@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  Alert,
   Modal,
   Platform,
 } from 'react-native';
@@ -55,11 +54,13 @@ export function WorkoutSummaryScreen({
     (sum, ex) => sum + ex.sets.length,
     0,
   );
+
   const totalReps = workout.exercises.reduce(
     (sum, ex) =>
       sum + ex.sets.reduce((setSum, s) => setSum + (s.reps ?? 0), 0),
     0,
   );
+
   const totalVolume = workout.exercises.reduce(
     (sum, ex) =>
       sum +
@@ -149,9 +150,7 @@ export function WorkoutSummaryScreen({
           </View>
         ) : null}
 
-        {workout.exercises.map((exercise) => {
-          console.log(exercise);
-          return(
+        {workout.exercises.map((exercise) => (
           <View key={exercise.exerciseId} style={styles.exerciseSection}>
             <Text style={styles.exerciseName}>{exercise.name}</Text>
             {exercise?.note && (
@@ -175,7 +174,7 @@ export function WorkoutSummaryScreen({
               </View>
             ))}
           </View>
-        )})}
+        ))}
 
         <Pressable
           onPress={handleDone}
