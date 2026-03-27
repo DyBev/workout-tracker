@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+
+  <title>Workout Tracker - Free Gym Workout Logger | Track Sets, Reps & Weight</title>
+  <meta name="description" content="Track your gym workouts with a simple, free workout logger. Record exercises, sets, reps, and weight. Works offline. Available on any browser and installable as a PWA.">
+  <meta name="keywords" content="workout tracker, gym tracker, workout log, exercise tracker, fitness app, gym app, track workouts, workout planner, set tracker, rep counter, weight lifting tracker, gym log, free workout app, PWA fitness app">
+  <meta name="author" content="dybev.uk">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://workout.dybev.uk/home">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://workout.dybev.uk/home">
+  <meta property="og:title" content="Workout Tracker - Free Gym Workout Logger">
+  <meta property="og:description" content="Track your gym workouts with a simple, free workout logger. Record exercises, sets, reps, and weight. Works offline on any device.">
+  <meta property="og:site_name" content="Workout Tracker">
+  <meta property="og:locale" content="en_GB">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Workout Tracker - Free Gym Workout Logger">
+  <meta name="twitter:description" content="Track your gym workouts with a simple, free workout logger. Record exercises, sets, reps, and weight. Works offline on any device.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Workout Tracker",
+    "url": "https://workout.dybev.uk",
+    "description": "A simple, free gym workout tracker. Log exercises, sets, reps, and weight. Works offline with automatic sync. Available on any browser and installable as a PWA.",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Web",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Free tier",
+        "price": "0",
+        "priceCurrency": "GBP",
+        "description": "Up to 30 workout recordings and 3 saved workout templates"
+      },
+      {
+        "@type": "Offer",
+        "name": "Paid subscription",
+        "priceCurrency": "GBP",
+        "description": "Unlimited workout recordings with cloud sync across all devices"
+      }
+    ],
+    "featureList": [
+      "Workout logging with sets, reps, and weight",
+      "Offline-first with automatic sync",
+      "Saved exercise library with tags",
+      "Workout history with filtering",
+      "Post-workout summary and stats",
+      "Body weight tracking",
+      "Cross-platform web app",
+      "Installable as a Progressive Web App"
+    ],
+    "termsOfService": "https://workout.dybev.uk/terms",
+    "privacyPolicy": "https://workout.dybev.uk/privacy"
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is Workout Tracker free to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Workout Tracker is free to use with a generous free tier that includes 30 workout recordings. You can read and review all your past workouts without limit."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What's included in the subscription?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You'll support the development of simple personal focused workout tracking app, cloud sync making workouts available across all your devices."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it work without an internet connection?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Absolutely. Workout Tracker is built offline-first. Your workouts are saved directly on your device and automatically sync to the cloud when you reconnect. You'll never lose a session mid-workout."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What platforms are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Workout Tracker works on any modern web browser and can be installed as a Progressive Web App for a native-like experience on your phone."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I track different types of exercises?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. You can create a personal exercise library with custom names, notes, and tags. Organise your exercises however you like and quickly add them to any workout session."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is my data secure?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Authentication is required to access the data, and you can only access your own data."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="https://workout.dybev.uk" class="nav-brand">Workout Tracker</a>
+      <div class="nav-links">
+        <a href="/home" class="nav-link active">Home</a>
+        <a href="/roadmap" class="nav-link">Roadmap</a>
+        <a href="#register" class="nav-cta">Register Interest</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container">
+      <h1>The Simple Way to <span>Track Your Workouts</span></h1>
+      <p>Log exercises, sets, reps, and weight in seconds. Review your workout history and track your progress over time. Free, offline-capable, and available on any device.</p>
+      <a href="#register" class="hero-cta">Register Your Interest</a>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="section-padded" id="how-it-works">
+      <div class="container">
+        <h2 class="section-heading section-heading--spaced">Core philosophy</h2>
+        <div class="steps-grid">
+          <div class="step">
+            <div class="step-number">1</div>
+            <h3>Make it simple</h3>
+            <p>You want something that works for you, which is why there is no workout library, you record the exercises and you build your own exercise library through use. The exercises will only be available to you.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <h3>No frills</h3>
+            <p>You just need something better than your notes app, maybe some extras that help you maintain the progress</p>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <h3>Function over form</h3>
+            <p>Complete your workout and see a summary of your session. Review your history any time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-padded" id="features">
+      <div class="container">
+        <h2 class="section-heading">Everything You Need to Log Your Gym Sessions</h2>
+        <p class="section-subtitle">No bloat. No distractions. Just a clean workout log that works.</p>
+        <div class="card-grid">
+
+          <article class="card">
+            <div class="card-icon card-icon--blue" aria-hidden="true">&#9998;</div>
+            <h3>Quick Workout Logging</h3>
+            <p>Start a workout, add exercises, and record sets with reps and weight. Finish when you're done. It's that simple.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon card-icon--green" aria-hidden="true">&#9989;</div>
+            <h3>Works Offline</h3>
+            <p>Built offline-first. Your workouts are saved locally and sync automatically when you're back online. Never lose a session.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon card-icon--grey" aria-hidden="true">&#128218;</div>
+            <h3>Exercise Library</h3>
+            <p>Build a personal library of exercises with notes and tags. Quickly add saved exercises to any workout.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon card-icon--blue" aria-hidden="true">&#128200;</div>
+            <h3>Workout History</h3>
+            <p>Browse past workouts in reverse-chronological order. Filter by tags to find specific sessions like leg day or push workouts.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon card-icon--red" aria-hidden="true">&#128170;</div>
+            <h3>Post-Workout Summary</h3>
+            <p>See total exercises, sets, reps, volume, and duration after every session. Track body weight alongside your training.</p>
+          </article>
+
+          <article class="card">
+            <div class="card-icon card-icon--green" aria-hidden="true">&#128241;</div>
+            <h3>Installable PWA</h3>
+            <p>Use it in any browser or install it as a Progressive Web App on your phone or desktop for a native app-like experience.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="section-padded" id="how-it-works">
+      <div class="container">
+        <h2 class="section-heading section-heading--spaced">How It Works</h2>
+        <div class="steps-grid">
+          <div class="step">
+            <div class="step-number">1</div>
+            <h3>Start a Workout</h3>
+            <p>Tap to begin a new session. Add exercises from your library or create new ones on the fly.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <h3>Log Your Sets</h3>
+            <p>Record reps and weight for each set. Add notes or tags to keep everything organised.</p>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <h3>Finish & Review</h3>
+            <p>Complete your workout and see a summary of your session. Review your history any time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-padded" id="faq">
+      <div class="container">
+        <h2 class="section-heading section-heading--spaced">Frequently Asked Questions</h2>
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">Is Workout Tracker free to use?</button>
+            <div class="faq-answer">
+              <p>Yes. Workout Tracker is free to use with a generous free tier that includes 30 workout recordings. You can read and review all your past workouts without limit.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">What's included in the subscription?</button>
+            <div class="faq-answer">
+              <p>You'll support the development of simple personal focused workout tracking app, cloud sync making workouts available across all your devices.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">Does it work without an internet connection?</button>
+            <div class="faq-answer">
+              <p>Absolutely. Workout Tracker is built offline-first. Your workouts are saved directly on your device and automatically sync to the cloud when you reconnect. You'll never lose a session mid-workout.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">What platforms are supported?</button>
+            <div class="faq-answer">
+              <p>Workout Tracker works on any modern web browser and can be installed as a Progressive Web App for a native-like experience on your phone.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">Can I track different types of exercises?</button>
+            <div class="faq-answer">
+              <p>Yes. You can create a personal exercise library with custom names, notes, and tags. Organise your exercises however you like and quickly add them to any workout session.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">Is my data secure?</button>
+            <div class="faq-answer">
+              <p>Yes. Authentication is required to access the data, and you can only access your own data.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">Can I request features?</button>
+            <div class="faq-answer">
+              <p>Currently no, I'm not set up to take feature requests from users, the features in the app are largely driven by two criteria:</p>
+              <p>1: Is this a feature that I would use?</p>
+              <p>2: Is this beneficial to the core of the app?</p>
+              <p>If the answer to those two questions is yes then I start to consider the development of the feature</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">Why pay when I can use AI to make this myself?</button>
+            <div class="faq-answer">
+              <p>You're not paying for the app, you're paying for me to be able to provide the app and maintain the app, think of it as you paying to not spend your time maintaining something.</p>
+              <p>But also I don't care, don't pay, the only reason this is here is because I wanted to build this, and I may aswel monetise the effort I have put into this.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-banner" id="register">
+      <div class="container">
+        <h2>Interested in the Workout Tracker?</h2>
+        <p>Leave your email and we'll create an account for you. When we're ready, you'll receive an email to set your password and get started.</p>
+        <form
+          class="register-form"
+          hx-post="/api/register-interest"
+          hx-target="this"
+          hx-encoding="form"
+          hx-swap="outerHTML"
+        >
+          <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address">
+          <button type="submit">Register Interest</button>
+        </form>
+        <p class="register-note">No spam. We'll only email you to set up your account.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Workout Tracker. Built by <a href="https://portfolio.dybev.uk">dybev.uk</a>. <a href="/terms">Terms</a> | <a href="/privacy">Privacy</a></p>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.faq-question').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var item = this.parentElement;
+        var isOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(function(el) {
+          el.classList.remove('open');
+          el.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+        if (!isOpen) {
+          item.classList.add('open');
+          this.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
