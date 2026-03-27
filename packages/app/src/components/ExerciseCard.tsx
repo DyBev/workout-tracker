@@ -63,7 +63,7 @@ export function ExerciseCard({
   }, []);
 
   const isSaved = !!savedExercise;
-  const hasNote = !!(exercise.note);
+  const hasNote = !!(savedExercise?.note);
 
   return (
     <View style={styles.exerciseCard}>
@@ -170,7 +170,6 @@ export function ExerciseCard({
         />
       )}
 
-      {/* Note Popover */}
       <Modal
         visible={showNotePopover}
         transparent
@@ -193,7 +192,7 @@ export function ExerciseCard({
                 <Text style={styles.popoverCloseText}>Close</Text>
               </Pressable>
             </View>
-            <Text style={styles.popoverText}>{exercise.note}</Text>
+            <Text style={styles.popoverText}>{savedExercise.note}</Text>
           </View>
         </Pressable>
       </Modal>
@@ -232,15 +231,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   noteButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: '1rem',
+    paddingVertical: '1rem',
     display: 'flex',
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
-  },
-  noteIcon: {
-    fontSize: 16,
     color: colors.primary.blue,
   },
   removeExerciseButton: {

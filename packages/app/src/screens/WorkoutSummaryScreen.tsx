@@ -1,11 +1,15 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   StyleSheet,
+  Alert,
+  Modal,
+  Platform,
 } from 'react-native';
+import { DocumentAttachment } from '@carbon/icons-react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { colors } from '../constants/colors';
@@ -18,6 +22,9 @@ export function WorkoutSummaryScreen({
   const { state } = useWorkout();
   const insets = useSafeAreaInsets();
   const { workoutId } = route.params;
+  const [showNote, setShowNote] = useState<boolean>(false);
+  const [note, setNote] = useState("");
+  const [noteExercise, setNoteExercise] = useState("");
 
   const workout = useMemo(
     () => state.history.find((w) => w.workoutId === workoutId) ?? null,
@@ -62,6 +69,18 @@ export function WorkoutSummaryScreen({
       ),
     0,
   );
+
+  const openNote = useCallback((note: string, exerciseName: string) => {
+    setNoteExercise(exerciseName);
+    setNote(note);
+    setShowNote(true);
+  }, []);
+
+  const closeNote = useCallback(() => {
+    setShowNote(false);
+    setNote("");
+    setNoteExercise("");
+  }, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -135,7 +154,17 @@ export function WorkoutSummaryScreen({
           return(
           <View key={exercise.exerciseId} style={styles.exerciseSection}>
             <Text style={styles.exerciseName}>{exercise.name}</Text>
-            {exercise?.note && <Text>{exercise.note}</Text>}
+            {exercise?.note && (
+              <Pressable
+                onPress={() => openNote(exercise.note, exercise.name)}
+                accessibilityRole="button"
+                accessibilityLabel={`View note for ${exercise.name}`}
+                style={styles.noteButton}
+              >
+                <DocumentAttachment size={16} />
+                <Text style={styles.noteButtonText}>Saved note</Text>
+              </Pressable>
+            )}
             {exercise.sets.map((set) => (
               <View key={set.setId} style={styles.setRow}>
                 <Text style={styles.setOrder}>Set {set.order}</Text>
@@ -157,6 +186,32 @@ export function WorkoutSummaryScreen({
           <Text style={styles.doneButtonText}>Done</Text>
         </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={showNote}
+        transparent
+        onRequestClose={closeNote}
+      >
+        <Pressable
+          style={styles.popoverOverlay}
+          onPress={closeNote}
+        >
+          <View style={styles.popoverContainer}>
+            <View style={styles.popoverHeader}>
+              <Text style={styles.popoverTitle}>Note - {noteExercise}</Text>
+              <Pressable
+                onPress={closeNote}
+                accessibilityRole="button"
+                accessibilityLabel="Close note"
+                style={styles.popoverClose}
+              >
+                <Text style={styles.popoverCloseText}>Close</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.popoverText}>{note}</Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -334,5 +389,111 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary.white,
+  },
+  noteButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: '0.5rem',
+    color: colors.primary.blue,
+    width: 'fit-content',
+  },
+  noteButtonText: {
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '80%',
+    backgroundColor: colors.primary.white,
+    borderRadius: 12,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalBody: {
+    marginBottom: 12,
+  },
+  modalText: {
+    fontSize: 14,
+    color: colors.primary.greyDarkest,
+  },
+  modalCloseButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  modalCloseText: {
+    color: colors.primary.blue,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  popoverOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  popoverContainer: {
+    backgroundColor: colors.primary.white,
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '60%',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary.black,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+      },
+    }),
+  },
+  popoverHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  popoverTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  popoverClose: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  popoverCloseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary.blue,
+  },
+  popoverText: {
+    fontSize: 14,
+    color: colors.primary.greyDarkest,
+    lineHeight: 20,
   },
 });
