@@ -202,7 +202,7 @@ export function ExerciseCard({
                 <Text style={styles.popoverCloseText}>Close</Text>
               </Pressable>
             </View>
-            <Text style={styles.popoverText}>{savedExercise.note}</Text>
+            <Text style={styles.popoverText}>{savedExercise?.note}</Text>
           </View>
         </Pressable>
       </Modal>
