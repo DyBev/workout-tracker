@@ -166,7 +166,6 @@ export function ExerciseCard({
             }
             onUpdateNote(exercise.exerciseId, trimmed);
             setNoteText(trimmed);
-            setShowNoteInput(false);
           }}
           accessibilityLabel={`Add note for ${exercise.name}`}
         />
