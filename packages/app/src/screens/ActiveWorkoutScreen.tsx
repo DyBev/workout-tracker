@@ -150,6 +150,10 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
     setEditorWorkoutExerciseId(null);
   }, []);
 
+  const handleGoHome = useCallback(() => {
+    navigation.navigate('Home');
+  }, [navigation]);
+
   if (!workout) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -159,11 +163,6 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
   }
 
   const elapsed = formatElapsed(workout.startedAt);
-
-  const handleGoHome = useCallback(() => {
-    navigation.navigate('Home');
-  }, [navigation]);
-
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
