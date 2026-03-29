@@ -16,11 +16,12 @@ import { useExercise } from '../contexts/ExerciseContext';
 interface ExerciseSuggestion {
   name: string;
   isSaved: boolean;
-  savedExerciseId: string | null;
+  savedExerciseId?: string;
+  previousExerciseId?: string;
 }
 
 interface AddExerciseRowProps {
-  onAdd: (name: string, savedExerciseId?: string | null) => void;
+  onAdd: (name: string, previousExerciseID?: string, savedExerciseId?: string) => void;
 }
 
 export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
@@ -28,16 +29,29 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
   const { savedExercises } = useExercise();
 
   const suggestions = useMemo<ExerciseSuggestion[]>(() => {
-    const savedNames = new Map<string, string>();
+    const savedNames = new Map<string, {
+      savedExerciseId: string,
+      previousExerciseId: string,
+    }>();
     for (const e of savedExercises) {
-      savedNames.set(e.name.toLowerCase(), e.savedExerciseId);
+      savedNames.set(e.name.toLowerCase(), {
+        savedExerciseId: e.savedExerciseId,
+        previousExerciseId: '',
+      });
     }
 
-    const historyNames = new Set<string>();
+    const historyNames = new Map<string, string>();
     for (const w of state.history) {
       for (const ex of w.exercises) {
-        if (!savedNames.has(ex.name.toLowerCase())) {
-          historyNames.add(ex.name);
+        const exerciseName = ex.name.toLowerCase();
+        if (!savedNames.has(exerciseName) && !historyNames.has(exerciseName)) {
+          historyNames.set(exerciseName, ex.exerciseId);
+        } else if (savedNames.has(exerciseName)) {
+          const savedExerciseData = savedNames.get(exerciseName);
+          if (savedExerciseData && !savedExerciseData.previousExerciseId) {
+            savedExerciseData.previousExerciseId = ex.exerciseId;
+            savedNames.set(exerciseName, { ...savedExerciseData });
+          }
         }
       }
     }
@@ -48,19 +62,28 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
     const savedList: ExerciseSuggestion[] = savedExercises
       .map((e) => e.name)
       .sort(sortAlpha)
-      .map((name) => ({
+      .map((name) => {
+        const {
+          savedExerciseId,
+          previousExerciseId,
+        } = savedNames.get(name.toLowerCase()) || {};
+
+        return({
         name,
         isSaved: true,
-        savedExerciseId: savedNames.get(name.toLowerCase()) ?? null,
-      }));
+        savedExerciseId,
+        previousExerciseId,
+      })});
 
-    const historyList: ExerciseSuggestion[] = Array.from(historyNames)
+    const historyList: ExerciseSuggestion[] = Object.keys(historyNames)
       .sort(sortAlpha)
-      .map((name) => ({
+      .map((name) => {
+        const previousExerciseId = historyNames.get(name.toLowerCase());
+        return({
         name,
         isSaved: false,
-        savedExerciseId: null,
-      }));
+        previousExerciseId,
+      })});
 
     return [...savedList, ...historyList];
   }, [savedExercises, state.history]);
@@ -80,14 +103,14 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
     const match = suggestions.find(
       (s) => s.name.toLowerCase() === trimmed.toLowerCase(),
     );
-    onAdd(trimmed, match?.savedExerciseId ?? null);
+    onAdd(trimmed, match?.previousExerciseId, match?.savedExerciseId);
     setName('');
     setShowSuggestions(false);
   }, [name, onAdd, suggestions]);
 
   const handleSelect = useCallback(
     (selected: ExerciseSuggestion) => {
-      onAdd(selected.name, selected.savedExerciseId);
+      onAdd(selected.name, selected.previousExerciseId, selected.savedExerciseId);
       setName('');
       setShowSuggestions(false);
     },
@@ -100,7 +123,6 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
   }, []);
 
   const handleBlur = useCallback(() => {
-    
     setTimeout(() => setShowSuggestions(false), 150);
   }, []);
 

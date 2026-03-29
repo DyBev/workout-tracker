@@ -236,7 +236,7 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
   );
 
   const getById = useCallback(
-    (savedExerciseId: string | null): SavedExercise | undefined => {
+    (savedExerciseId?: string): SavedExercise | undefined => {
       if (!savedExerciseId) return undefined;
       return state.savedExercises.find(
         (e) => e.savedExerciseId === savedExerciseId,

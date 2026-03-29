@@ -1,11 +1,13 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import { WorkoutExercise, SavedExercise } from '../types/workout';
 import { View, Text, Pressable, Modal, StyleSheet, Platform, TextInput } from 'react-native';
 import { Button } from './Button';
 import { SetRow } from './SetRow';
 import { colors } from '../constants/colors';
-import { DocumentAttachment, Star, StarFilled } from '@carbon/icons-react';
+import { DocumentAttachment, ResultOld, Star, StarFilled } from '@carbon/icons-react';
 import { ConfirmationDialog } from './ConfirmationDialog';
+import { useWorkout } from '../contexts/WorkoutContext';
+import { PreviousExerciseData } from './PreviousExerciseData';
 
 interface ExerciseCardProps {
   exercise: WorkoutExercise;
@@ -39,6 +41,9 @@ export function ExerciseCard({
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState(exercise.note ?? '');
   const [showConfirmRemoveExercise, setShowConfirmRemoveExercise] = useState(false);
+  const { getExerciseById } = useWorkout();
+  const previousExercise = useMemo(() => getExerciseById(exercise.previousExerciseId), [exercise.previousExerciseId]);
+  const [showPreviousExerciseData, setShowPreviousExerciseData] = useState(false);
 
   useEffect(() => {
     setNoteText(exercise.note ?? '');
@@ -62,6 +67,14 @@ export function ExerciseCard({
 
   const handleNotePress = useCallback(() => {
     setShowNotePopover(true);
+  }, []);
+
+  const handleOpenPreviousData = useCallback(() => {
+    setShowPreviousExerciseData(true);
+  }, []);
+
+  const handleClosePreviousData = useCallback(() => {
+    setShowPreviousExerciseData(false);
   }, []);
 
   const isSaved = !!savedExercise;
@@ -93,16 +106,29 @@ export function ExerciseCard({
           <Text style={styles.removeExerciseText}>Remove</Text>
         </Pressable>
       </View>
-      {hasNote && (
-        <Pressable
-          onPress={handleNotePress}
-          accessibilityRole="button"
-          accessibilityLabel={`View note for ${exercise.name}`}
-          style={styles.noteButton}
-        >
-          <DocumentAttachment size={16} /> <Text>Saved note</Text>
-        </Pressable>
-      )}
+      {(hasNote || previousExercise) && <View style={styles.noteRow}>
+        {hasNote && (
+          <Pressable
+            onPress={handleNotePress}
+            accessibilityRole="button"
+            accessibilityLabel={`View note for ${exercise.name}`}
+            style={styles.noteButton}
+          >
+            <DocumentAttachment size={16} /><Text>Saved note</Text>
+          </Pressable>
+        )}
+        {previousExercise && (
+          <Pressable
+            onPress={handleOpenPreviousData}
+            accessibilityRole="button"
+            accessibilityLabel={`View note for ${exercise.name}`}
+            style={styles.noteButton}
+          >
+            <ResultOld size={16} /><Text>Prevous Exercise</Text>
+          </Pressable>
+        )}
+        </View>
+      }
 
       {exercise.sets.length > 0 && (
         <View style={styles.setHeaderRow}>
@@ -150,7 +176,6 @@ export function ExerciseCard({
           value={noteText}
           onChangeText={(t) => {
             setNoteText(t);
-            // persist immediately so parent save includes the latest text
             onUpdateNote(exercise.exerciseId, t === '' ? null : t);
           }}
           placeholder="Add a note..."
@@ -205,6 +230,12 @@ export function ExerciseCard({
           </View>
         </Pressable>
       </Modal>
+
+      <PreviousExerciseData
+        previousExercise={previousExercise}
+        onClose={handleClosePreviousData}
+        visible={!!previousExercise && showPreviousExerciseData}
+      />
     </View>
   );
 }
@@ -239,6 +270,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
   },
+
+  noteRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   noteButton: {
     paddingHorizontal: '1rem',
     paddingVertical: '1rem',
@@ -247,6 +284,8 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
     color: colors.primary.blue,
+    border: `solid 1px ${colors.primary.greyLight}`,
+    borderRadius: '0.5rem',
   },
   removeExerciseButton: {
     paddingVertical: 4,

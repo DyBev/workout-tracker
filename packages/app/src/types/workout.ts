@@ -10,7 +10,8 @@ export interface WorkoutSet {
 
 export interface WorkoutExercise {
   exerciseId: string;
-  savedExerciseId: string | null;
+  savedExerciseId?: string;
+  previousExerciseId?: string;
   name: string;
   order: number;
   sets: WorkoutSet[];
@@ -96,7 +97,7 @@ export type WorkoutAction =
 export interface WorkoutContextValue {
   state: WorkoutState;
   startWorkout: () => void;
-  addExercise: (name: string, savedExerciseId?: string | null) => void;
+  addExercise: (name: string, savedExerciseId?: string) => void;
   removeExercise: (exerciseId: string) => void;
   addSet: (exerciseId: string) => void;
   removeSet: (exerciseId: string, setId: string) => void;
@@ -109,19 +110,20 @@ export interface WorkoutContextValue {
   updateExerciseName: (
     exerciseId: string,
     name: string,
-    savedExerciseId: string | null,
+    savedExerciseId: string,
   ) => void;
   updateExerciseSavedId: (
     exerciseId: string,
     savedExerciseId: string,
   ) => void;
-  updateExerciseNote: (exerciseId: string, note: string | null) => void;
+  updateExerciseNote: (exerciseId: string, note: string) => void;
   updateNotes: (notes: string) => void;
   updateTags: (tags: string[]) => void;
   updateBodyWeight: (weight: number) => void;
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   syncWorkouts: (workouts?: Workout[]) => Promise<void>;
+  getExerciseById: (previousExerciseId?: string) => WorkoutExercise | undefined;
 }
 
 export interface SavedExerciseState {
@@ -147,6 +149,6 @@ export interface ExerciseContextValue {
   updateExercise: (exercise: SavedExercise) => Promise<void>;
   archiveExercise: (savedExerciseId: string) => Promise<void>;
   restoreExercise: (savedExerciseId: string) => Promise<void>;
-  getById: (savedExerciseId: string | null) => SavedExercise | undefined;
+  getById: (savedExerciseId?: string) => SavedExercise | undefined;
   syncExercises: (exercises?: SavedExercise[]) => Promise<void>;
 }

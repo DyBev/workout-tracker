@@ -159,13 +159,14 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   );
 
   const addExercise = useCallback(
-    (name: string, savedExerciseId?: string | null) => {
+    (name: string, previousExerciseId?: string, savedExerciseId?: string) => {
       updateActiveWorkout((workout) => {
         const exerciseId = generateId();
         const order = workout.exercises.length + 1;
         const newExercise: WorkoutExercise = {
           exerciseId,
-          savedExerciseId: savedExerciseId ?? null,
+          savedExerciseId,
+          previousExerciseId,
           name,
           order,
           sets: [],
@@ -303,7 +304,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   );
 
   const updateExerciseName = useCallback(
-    (exerciseId: string, name: string, savedExerciseId: string | null) => {
+    (exerciseId: string, name: string, savedExerciseId: string) => {
       updateActiveWorkout((workout) => ({
         ...workout,
         exercises: workout.exercises.map((e) =>
@@ -368,6 +369,17 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     dispatch({ type: 'DISCARD_WORKOUT' });
     navigation.navigate('Home' as never);
   }, [navigation]);
+  
+  const getExerciseById = useCallback((previousExerciseId: string) => {
+    const workouts = state.history;
+    for (const workout of workouts) {
+      for (const exercise of workout.exercises) {
+        if (exercise.exerciseId == previousExerciseId) {
+          return exercise;
+        }
+      }
+    }
+  }, [state.history]);
 
   const value = useMemo<WorkoutContextValue>(
     () => ({
@@ -387,6 +399,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       completeWorkout,
       discardWorkout,
       syncWorkouts,
+      getExerciseById,
     }),
     [
       state,
@@ -405,6 +418,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       completeWorkout,
       discardWorkout,
       syncWorkouts,
+      getExerciseById,
     ],
   );
 
