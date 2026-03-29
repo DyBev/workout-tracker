@@ -91,6 +91,7 @@ export type WorkoutAction =
   | { type: 'RESTORE_ACTIVE_WORKOUT'; workout: Workout }
   | { type: 'MARK_SYNCED'; workoutIds: string[] }
   | { type: 'SET_NEXT_SK'; sk: string }
+  | { type: 'UPDATE_BODY_WEIGHT'; workoutId: string; bodyWeight: number }
   | { type: 'MARK_SYNC_FAILED'; workoutIds: string[] };
 
 
@@ -119,7 +120,7 @@ export interface WorkoutContextValue {
   updateExerciseNote: (exerciseId: string, note: string) => void;
   updateNotes: (notes: string) => void;
   updateTags: (tags: string[]) => void;
-  updateBodyWeight: (weight: number) => void;
+  updateBodyWeight: (weight: number, workoutId?: string) => void;
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   syncWorkouts: (workouts?: Workout[]) => Promise<void>;

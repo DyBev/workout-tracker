@@ -65,3 +65,25 @@ export const getWorkouts = async (lastSK: string | undefined): Promise<{
 	}
 }
 
+export const updateBodyWeight = async (bodyWeight: number, workoutId: string): Promise<boolean> => {
+  try {
+    const session = await getCurrentSession();
+    const response = await fetch(`${baseUrl}/workout/update/bodyweight`, {
+      headers: {
+        Authorization: `Bearer ${session?.tokens.idToken}`
+      },
+      body: JSON.stringify({
+        workoutId,
+        bodyWeight,
+      }),
+      method: "PATCH",
+    });
+    if (response.status >= 200 && response.status < 300) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}

@@ -13,17 +13,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { colors } from '../constants/colors';
 import type { WorkoutSummaryScreenProps } from '../types/workout';
+import { EditBodyWeight } from '../components/EditBodyWeight';
 
 export function WorkoutSummaryScreen({
   navigation,
   route,
 }: WorkoutSummaryScreenProps) {
-  const { state } = useWorkout();
+  const { state, updateBodyWeight } = useWorkout();
   const insets = useSafeAreaInsets();
   const { workoutId } = route.params;
   const [showNote, setShowNote] = useState<boolean>(false);
   const [note, setNote] = useState("");
   const [noteExercise, setNoteExercise] = useState("");
+  const [showEditBodyWeight, setShowEditBodyWeight] = useState(false);
 
   const workout = useMemo(
     () => state.history.find((w) => w.workoutId === workoutId) ?? null,
@@ -33,6 +35,31 @@ export function WorkoutSummaryScreen({
   const handleDone = useCallback(() => {
     navigation.navigate('WorkoutHistory');
   }, [navigation]);
+
+  const openNote = useCallback((note: string, exerciseName: string) => {
+    setNoteExercise(exerciseName);
+    setNote(note);
+    setShowNote(true);
+  }, []);
+
+  const closeNote = useCallback(() => {
+    setShowNote(false);
+    setNote("");
+    setNoteExercise("");
+  }, []);
+
+  const onUpdateBodyWeight = (bodyWeight: number) => {
+    updateBodyWeight(bodyWeight, workoutId);
+  }
+
+  const onOpenEditBodyWeight = () => {
+    setShowEditBodyWeight(true);
+  }
+
+  const onCloseEditBodyWeight = () => {
+    setShowEditBodyWeight(false);
+  }
+
 
   if (!workout) {
     return (
@@ -71,17 +98,8 @@ export function WorkoutSummaryScreen({
     0,
   );
 
-  const openNote = useCallback((note: string, exerciseName: string) => {
-    setNoteExercise(exerciseName);
-    setNote(note);
-    setShowNote(true);
-  }, []);
-
-  const closeNote = useCallback(() => {
-    setShowNote(false);
-    setNote("");
-    setNoteExercise("");
-  }, []);
+  const now = Date.now();
+  const timeDifference = workout.completedAt && (now - Date.parse(workout.completedAt)) / (3600*1000)
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -136,7 +154,26 @@ export function WorkoutSummaryScreen({
           </View>
         )}
 
-        {workout.bodyWeight > 0 && (
+        {(typeof timeDifference == 'number' && timeDifference < 6) && (
+          <Pressable style={styles.volumeCard} onPress={onOpenEditBodyWeight}>
+          {(workout.bodyWeight == 0) ? (
+            <Text style={styles.volumeLabel}>Tap to add body weight</Text>
+            ) : (
+            <>
+              <Text style={styles.volumeLabel}>Body Weight</Text>
+              <Text style={styles.volumeValue}>{workout.bodyWeight} kg</Text>
+            </>
+          )}
+          </Pressable>
+        )}
+
+        {
+          (workout.bodyWeight > 0 
+            && (
+              (typeof timeDifference == 'number' && timeDifference > 6) 
+              || typeof timeDifference !== 'number'
+            )
+          ) && (
           <View style={styles.volumeCard}>
             <Text style={styles.volumeLabel}>Body Weight</Text>
             <Text style={styles.volumeValue}>{workout.bodyWeight} kg</Text>
@@ -211,6 +248,15 @@ export function WorkoutSummaryScreen({
           </View>
         </Pressable>
       </Modal>
+
+      {(typeof timeDifference == 'number' && timeDifference < 6) && <EditBodyWeight
+        bodyWeightValue={workout.bodyWeight}
+        workoutId={workout.workoutId}
+        onClose={onCloseEditBodyWeight}
+        updateWorkoutBodyWeight={onUpdateBodyWeight}
+        visible={timeDifference < 6 && showEditBodyWeight}
+      />}
+
     </View>
   );
 }

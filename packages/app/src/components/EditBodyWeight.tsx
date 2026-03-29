@@ -1,67 +1,80 @@
-import React from 'react';
-import { Modal, View, Text, StyleSheet } from 'react-native';
+import { Modal, StyleSheet, View, Text } from 'react-native';
 import { Button } from './Button';
 import { colors } from '../constants/colors';
+import { BodyWeightInput } from './BodyWeightInput';
+import { useState } from 'react';
+import { updateBodyWeight } from '../services/workoutApi';
 
-export interface ConfirmationDialogProps {
-  visible: boolean;
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  destructive?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
+type EditBodyWeightProps = {
+  bodyWeightValue: number,
+  workoutId: string,
+  visible: boolean,
+  onClose: () => void,
+  updateWorkoutBodyWeight: (_: number) => void,
 }
 
-export function ConfirmationDialog({
+export const EditBodyWeight = ({
+  bodyWeightValue,
+  workoutId,
   visible,
-  title,
-  message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-  destructive = false,
-  onConfirm,
-  onCancel,
-}: ConfirmationDialogProps) {
-  return (
+  onClose,
+  updateWorkoutBodyWeight,
+}: EditBodyWeightProps) => {
+  const [bodyWeight, setBodyWeight] = useState(bodyWeightValue);
+
+  const onChange = (bodyWeight: number) => {
+    setBodyWeight(bodyWeight);
+  };
+
+  const onSave = () => {
+    updateBodyWeight(bodyWeight, workoutId).then((success) => {
+      if (success) {
+        updateWorkoutBodyWeight(bodyWeight);
+        onClose();
+      }
+    });
+  }
+
+  return(
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={onClose}
       statusBarTranslucent
     >
       <View style={styles.overlay}>
         <View
           style={styles.dialog}
           accessibilityRole="alert"
-          accessibilityLabel={title}
+          accessibilityLabel={"Update body weight"}
         >
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text style={styles.title}>Update Body Weight</Text>
+          <BodyWeightInput
+            value={bodyWeight}
+            onChangeValue={onChange}
+          />
           <View style={styles.actions}>
             <Button
-              title={cancelLabel}
-              variant="secondary"
-              onPress={onCancel}
+              title={"cancel"}
+              variant='secondary'
+              onPress={onClose}
               containerStyle={styles.button}
             />
             <Button
-              title={confirmLabel}
-              variant="primary"
-              onPress={onConfirm}
+              title={"save"}
+              variant='primary'
+              onPress={onSave}
               containerStyle={StyleSheet.flatten([
                 styles.button,
-                destructive ? styles.destructiveButton : undefined,
               ])}
             />
           </View>
         </View>
       </View>
     </Modal>
-  );
-}
+  )
+};
 
 const styles = StyleSheet.create({
   overlay: {

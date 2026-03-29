@@ -53,12 +53,21 @@ function workoutReducer(
       return { ...state, activeWorkout: null };
     case 'LOAD_HISTORY':
       return { ...state, history: action.workouts, isLoading: false };
-	case 'SET_NEXT_SK': {
-		return {
-			...state,
-			nextSk: action.sk,
-		};
-	}
+    case 'UPDATE_BODY_WEIGHT':
+      return { ...state, 
+        history: state.history.map((workout) => {
+          if (workout.workoutId == action.workoutId) {
+            return { ...workout, bodyWeight: action.bodyWeight };
+          }
+          return workout;
+        }),
+    };
+    case 'SET_NEXT_SK': {
+      return {
+        ...state,
+        nextSk: action.sk,
+      };
+    }
 
 
     default:
@@ -86,17 +95,17 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
           workoutStorage.getPendingWorkouts(),
           workoutApi.getWorkouts(""),
         ]);
-		if (workouts.nextSk) {
-			dispatch({ type: 'SET_NEXT_SK', sk: workouts.nextSk });
-		}
+        if (workouts.nextSk) {
+          dispatch({ type: 'SET_NEXT_SK', sk: workouts.nextSk });
+        }
 
         const apiMap = new Map(workouts.workouts.map((w) => [w.workoutId, w]));
 
-		if (active && !apiMap.has(active.workoutId)) {
+        if (active && !apiMap.has(active.workoutId)) {
           dispatch({ type: 'START_WORKOUT', workout: active });
         } else {
-			workoutStorage.clearActiveWorkout();
-		}
+          workoutStorage.clearActiveWorkout();
+        }
 
         for (const w of pending) {
           if (!apiMap.has(w.workoutId)) {
@@ -256,11 +265,9 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     ) => {
       updateActiveWorkout((workout) => {
         const exercises = workout.exercises.map((exercise) => {
-          console.log(exerciseId, exercise.exerciseId);
           if (exercise.exerciseId !== exerciseId) return exercise;
           return { ...exercise, savedExerciseId };
         });
-        console.log(exercises);
         return { ...workout, exercises };
       });
     },
@@ -297,8 +304,16 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   );
 
   const updateBodyWeight = useCallback(
-    (bodyWeight: number) => {
-      updateActiveWorkout((workout) => ({ ...workout, bodyWeight }));
+    (bodyWeight: number, workoutId?: string) => {
+      if (workoutId) {
+        dispatch({
+          type: 'UPDATE_BODY_WEIGHT',
+          workoutId, bodyWeight
+        })
+        return;
+      } else {
+        updateActiveWorkout((workout) => ({ ...workout, bodyWeight }));
+      }
     },
     [updateActiveWorkout],
   );
