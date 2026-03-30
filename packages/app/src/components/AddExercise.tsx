@@ -44,6 +44,7 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
     for (const w of state.history) {
       for (const ex of w.exercises) {
         const exerciseName = ex.name.toLowerCase();
+        console.log(exerciseName, !savedNames.has(exerciseName) && !historyNames.has(exerciseName))
         if (!savedNames.has(exerciseName) && !historyNames.has(exerciseName)) {
           historyNames.set(exerciseName, ex.exerciseId);
         } else if (savedNames.has(exerciseName)) {
@@ -75,7 +76,7 @@ export function AddExerciseRow({ onAdd }: AddExerciseRowProps) {
         previousExerciseId,
       })});
 
-    const historyList: ExerciseSuggestion[] = Object.keys(historyNames)
+    const historyList: ExerciseSuggestion[] = [...historyNames.keys()]
       .sort(sortAlpha)
       .map((name) => {
         const previousExerciseId = historyNames.get(name.toLowerCase());
