@@ -143,9 +143,7 @@ export function ExerciseProvider({ children }: ExerciseProviderProps) {
         );
 
         for (const e of pending) {
-          if (!apiMap.has(e.savedExerciseId)) {
-            apiMap.set(e.savedExerciseId, e);
-          }
+          apiMap.set(e.savedExerciseId, e);
         }
 
         const merged = Array.from(apiMap.values());
