@@ -384,7 +384,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     dispatch({ type: 'DISCARD_WORKOUT' });
     navigation.navigate('Home' as never);
   }, [navigation]);
-  
+
   const getExerciseById = useCallback((previousExerciseId: string) => {
     const workouts = state.history;
     for (const workout of workouts) {
@@ -395,6 +395,19 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       }
     }
   }, [state.history]);
+
+  const getPreviousExerciseByName = (name: string): string | undefined => {
+    for (let i = 0; i < state.history.length; i++) {
+      const workout = state.history[i];
+      for (let j = 0; j < workout.exercises.length; j++) {
+        const exercise = workout.exercises[j];
+        if (exercise.name == name) {
+          return exercise.exerciseId
+        }
+      }
+    }
+    return
+  }
 
   const getNewSetsFromOld = (sets: WorkoutSet[]): WorkoutSet[] => sets.map((set) => {
     const {
@@ -416,17 +429,17 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
 
   const getNewExercisesFromOld = (exercises: WorkoutExercise[]) => exercises.map((exercise) => {
     const {
-      exerciseId,
       savedExerciseId,
       name,
       order,
       sets,
     } = exercise;
+    const previousExerciseId = getPreviousExerciseByName(exercise.name)
 
     return {
       exerciseId: generateId(),
       savedExerciseId,
-      previousExerciseId: exerciseId,
+      previousExerciseId,
       name,
       order,
       sets: getNewSetsFromOld(sets),
