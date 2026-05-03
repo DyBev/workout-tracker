@@ -40,7 +40,6 @@ export function SavedExercisesScreen({ navigation }: SavedExercisesScreenProps) 
     // Filter by archived status
     if (!showArchived) {
       exercises = exercises.filter((e) => {
-        console.log(e, !e.archivedAt, e.archivedAt === null, !e?.archivedAt || e.archivedAt === null);
         return !e?.archivedAt || e.archivedAt === null;
       })
     }
