@@ -170,7 +170,7 @@ export function ActiveWorkoutScreen({ navigation }: ActiveWorkoutScreenProps) {
         <Pressable
           onPress={handleGoHome}
           accessibilityRole="button"
-          accessibilityLabel="Discard workout"
+          accessibilityLabel="Go home"
           style={styles.discardButton}
         >
           <ChevronLeft size={32} />

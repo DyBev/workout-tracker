@@ -8,18 +8,18 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import { DocumentAttachment } from '@carbon/icons-react';
+import { ChevronLeft, DocumentAttachment } from '@carbon/icons-react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { colors } from '../constants/colors';
-import type { WorkoutSummaryScreenProps } from '../types/workout';
+import type {  WorkoutSummaryScreenProps } from '../types/workout';
 import { EditBodyWeight } from '../components/EditBodyWeight';
 
 export function WorkoutSummaryScreen({
   navigation,
   route,
 }: WorkoutSummaryScreenProps) {
-  const { state, updateBodyWeight } = useWorkout();
+  const { state, updateBodyWeight, startExerciseFromOldExercise } = useWorkout();
   const insets = useSafeAreaInsets();
   const { workoutId } = route.params;
   const [showNote, setShowNote] = useState<boolean>(false);
@@ -104,23 +104,36 @@ export function WorkoutSummaryScreen({
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title} accessibilityRole="header">
-          Workout Complete
-        </Text>
-        {workout.completedAt && (
-          <Text style={styles.subtitle}>
-            {formatDuration(workout.startedAt, workout.completedAt)}
+        <Pressable
+          onPress={handleDone}
+          accessibilityRole="button"
+          accessibilityLabel="Go home"
+          style={styles.discardButton}
+        >
+          <ChevronLeft size={32} />
+        </Pressable>
+        <View style={styles.headerContent}>
+          <Text style={styles.title} accessibilityRole="header">
+            Completed Workout
           </Text>
-        )}
-        {workout.tags?.length > 0 && (
-          <View style={styles.headerTagList}>
-            {workout.tags.map((tag) => (
-              <View key={tag} style={styles.headerTagPill}>
-                <Text style={styles.headerTagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+          {workout.completedAt && (
+            <Text style={styles.subtitle}>
+              {formatDuration(workout.startedAt, workout.completedAt)}
+            </Text>
+          )}
+          {workout.tags?.length > 0 && (
+            <View style={styles.headerTagList}>
+              {workout.tags.map((tag) => (
+                <View key={tag} style={styles.headerTagPill}>
+                  <Text style={styles.headerTagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+        <View
+          style={styles.discardButton}
+        />
       </View>
 
       <ScrollView
@@ -214,12 +227,14 @@ export function WorkoutSummaryScreen({
         ))}
 
         <Pressable
-          onPress={handleDone}
+          onPress={() => {
+            startExerciseFromOldExercise(workout);
+          }}
           accessibilityRole="button"
           accessibilityLabel="Done"
           style={styles.doneButtonLarge}
         >
-          <Text style={styles.doneButtonText}>Done</Text>
+          <Text style={styles.doneButtonText}>Use as next exercise</Text>
         </Pressable>
       </ScrollView>
 
@@ -276,11 +291,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.white,
   },
   header: {
+    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 24,
     borderBottomWidth: 1,
     borderBottomColor: colors.primary.greyLight,
+  },
+  headerContent: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
@@ -541,4 +562,14 @@ const styles = StyleSheet.create({
     color: colors.primary.greyDarkest,
     lineHeight: 20,
   },
+
+  discardButton: {
+    height: 56,
+    width: 56,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
 });

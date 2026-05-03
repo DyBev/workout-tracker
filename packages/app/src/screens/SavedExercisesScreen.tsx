@@ -15,7 +15,6 @@ import { Button, ConfirmationDialog } from '../components';
 import { ExerciseEditorModal } from '../components/ExerciseEditorModal';
 import { colors } from '../constants/colors';
 import type { SavedExercise, SavedExercisesScreenProps } from '../types/workout';
-import { getPublicInstanceFromRootTag } from 'react-native/types_generated/Libraries/ReactNative/RendererImplementation';
 
 export function SavedExercisesScreen({ navigation }: SavedExercisesScreenProps) {
   const insets = useSafeAreaInsets();

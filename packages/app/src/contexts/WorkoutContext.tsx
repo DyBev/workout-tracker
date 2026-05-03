@@ -20,7 +20,7 @@ import type {
 } from '../types/workout';
 import { useNavigation } from '@react-navigation/native';
 
-function generateId(): string {
+export function generateId(): string {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
@@ -396,6 +396,68 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
     }
   }, [state.history]);
 
+  const getNewSetsFromOld = (sets: WorkoutSet[]): WorkoutSet[] => sets.map((set) => {
+    const {
+      order,
+      weight,
+      weightUnit,
+    } = set;
+
+    const newSet: WorkoutSet = {
+      setId: generateId(),
+      order,
+      weight,
+      weightUnit,
+      reps: 0,
+    }
+
+    return newSet;
+  })
+
+  const getNewExercisesFromOld = (exercises: WorkoutExercise[]) => exercises.map((exercise) => {
+    const {
+      exerciseId,
+      savedExerciseId,
+      name,
+      order,
+      sets,
+    } = exercise;
+
+    return {
+      exerciseId: generateId(),
+      savedExerciseId,
+      previousExerciseId: exerciseId,
+      name,
+      order,
+      sets: getNewSetsFromOld(sets),
+    }
+  })
+
+  const startExerciseFromOldExercise = (workout: Workout | undefined) => {
+    if (workout) {
+      const { tags, exercises } = workout;
+      const now = new Date().toISOString();
+      const workoutId = generateId();
+
+      const newWorkout: Workout = {
+        workoutId,
+        templateId: null,
+        startedAt: now,
+        completedAt: null,
+        notes: '',
+        tags,
+        bodyWeight: 0,
+        exercises: getNewExercisesFromOld(exercises),
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pending',
+      };
+
+      dispatch({type: 'START_WORKOUT', workout: newWorkout});
+      navigation.navigate('ActiveWorkout' as never);
+    }
+  };
+
   const value = useMemo<WorkoutContextValue>(
     () => ({
       state,
@@ -415,6 +477,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       discardWorkout,
       syncWorkouts,
       getExerciseById,
+      startExerciseFromOldExercise,
     }),
     [
       state,
@@ -434,6 +497,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       discardWorkout,
       syncWorkouts,
       getExerciseById,
+      startExerciseFromOldExercise,
     ],
   );
 

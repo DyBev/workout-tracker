@@ -124,7 +124,8 @@ export interface WorkoutContextValue {
   completeWorkout: () => Promise<void>;
   discardWorkout: () => Promise<void>;
   syncWorkouts: (workouts?: Workout[]) => Promise<void>;
-  getExerciseById: (previousExerciseId?: string) => WorkoutExercise | undefined;
+  getExerciseById: (previousExerciseId: string) => WorkoutExercise | undefined;
+  startExerciseFromOldExercise: (workout: Workout) => void
 }
 
 export interface SavedExerciseState {
