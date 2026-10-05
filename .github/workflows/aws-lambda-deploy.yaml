@@ -1,0 +1,65 @@
+name: Deploy AWS Lambda
+
+on:
+  push:
+    branches: [ 'main' ]
+    paths: 'functions/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 'aws-lambda'
+  cancel-in-progress: false
+
+jobs:
+  find-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-functions: ${{ steps.detect.outputs.functions }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed functions
+        id: detect
+        run: |
+          FUNCTIONS=$(git diff --name-only HEAD~1 HEAD | grep '^functions/' | cut -d'/' -f2 | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          echo "functions=${FUNCTIONS}" >> $GITHUB_OUTPUT
+
+  deploy-functions:
+    needs: find-changes
+    if: needs.find-changes.outputs.changed-functions != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        function: ${{ fromJson(needs.find-changes.outputs.changed-functions) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_SECRET_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS }}
+          aws-region: ${{ secrets.AWS_LAMBDA_REGION }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Install Dependencies
+        run: go mod tidy
+
+      - name: Build Function
+        run: make ${{ matrix.function }}
+
+      - name: Deploy Lambda Function
+        run: aws lambda update-function-code --function-name ${{ secrets[format('AWS_LAMBDA_{0}_ARN', replace(matrix.function, '-', '_'))] }} --zip-file fileb://build/${{ matrix.function }}.zip
+
