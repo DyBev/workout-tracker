@@ -13,7 +13,6 @@ import (
 
 func main() {
 	tableName := os.Getenv("TABLE_NAME")
-
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("eu-west-2"))
 	if err != nil {
 		log.Fatalf("unable to load AWS config: %v", err)
