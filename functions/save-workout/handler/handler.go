@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -65,6 +65,9 @@ func (h *Handler) HandleRequest(
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
+		if userID == "" {
+			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+		}
 	} else {
 		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 	}
@@ -101,6 +104,13 @@ func (h *Handler) HandleRequest(
 	}), nil
 }
 
+func min(a int, b int) int {
+	if (a > b) {
+		return b
+	}
+	return a
+}
+
 // saveWorkouts writes all workouts using DynamoDB BatchWriteItem, chunking into
 // groups of 25 and retrying UnprocessedItems with exponential backoff.
 // It returns a set of workoutIDs that could not be saved.
@@ -114,10 +124,7 @@ func (h *Handler) saveWorkouts(ctx context.Context, workouts []Workout) (map[str
 	// Process in chunks of maxBatchSize.
 	var allUnprocessed []types.WriteRequest
 	for i := 0; i < len(requests); i += maxBatchSize {
-		end := i + maxBatchSize
-		if end > len(requests) {
-			end = len(requests)
-		}
+		end := min(i + maxBatchSize, len(requests))
 		chunk := requests[i:end]
 
 		unprocessed, err := h.batchWriteWithRetry(ctx, chunk)
