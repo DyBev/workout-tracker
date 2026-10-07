@@ -1,4 +1,4 @@
-package main
+package handler
 
 // WorkoutSet represents a single set within an exercise.
 type WorkoutSet struct {

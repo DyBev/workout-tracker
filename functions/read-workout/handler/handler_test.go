@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -35,9 +35,9 @@ func makeAuthedRequest(userID string, queryParams map[string]string) events.APIG
 	return events.APIGatewayProxyRequest{
 		QueryStringParameters: queryParams,
 		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				"jwt": map[string]interface{}{
-					"claims": map[string]interface{}{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{
 						"sub": userID,
 					},
 				},
@@ -62,7 +62,7 @@ func parseResponseBody(t *testing.T, body string) map[string]any {
 // buildWorkoutItems constructs n DynamoDB attribute maps that look like Workout items.
 func buildWorkoutItems(userID string, n int) []map[string]types.AttributeValue {
 	items := make([]map[string]types.AttributeValue, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		sk := fmt.Sprintf("WORKOUT#2026-03-%02dT10:00:00.000Z#wkt-%03d", i+1, i)
 		items[i] = map[string]types.AttributeValue{
 			"userId":    &types.AttributeValueMemberS{Value: userID},
@@ -77,7 +77,7 @@ func buildWorkoutItems(userID string, n int) []map[string]types.AttributeValue {
 	return items
 }
 
-// ── Tests: Auth ──────────────────────────────────────────────────────────────
+// TEST: Auth
 
 func TestRejectsUnauthenticated(t *testing.T) {
 	mock := &mockDynamo{}
@@ -99,16 +99,38 @@ func TestRejectsUnauthenticated(t *testing.T) {
 	}
 }
 
+func TestRejectsMissingClaimsSub(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "TestTable")
+
+	req := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{},
+				},
+			},
+		},
+	}
+
+	resp, err := h.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+
 func TestRejectsMissingJWTClaims(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
 	req := events.APIGatewayProxyRequest{
 		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				"jwt": map[string]interface{}{
-					// no "claims" key
-				},
+			Authorizer: map[string]any{
+				"jwt": map[string]any{},
 			},
 		},
 	}
@@ -128,9 +150,7 @@ func TestRejectsMissingJWTKey(t *testing.T) {
 
 	req := events.APIGatewayProxyRequest{
 		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				// no "jwt" key
-			},
+			Authorizer: map[string]any{},
 		},
 	}
 
@@ -143,7 +163,7 @@ func TestRejectsMissingJWTKey(t *testing.T) {
 	}
 }
 
-// ── Tests: Missing table name ─────────────────────────────────────────────────
+// TEST: Missing table name
 
 func TestRejectsMissingTableName(t *testing.T) {
 	mock := &mockDynamo{}
@@ -162,8 +182,7 @@ func TestRejectsMissingTableName(t *testing.T) {
 	}
 }
 
-// ── Tests: Successful read (first page, no cursor) ───────────────────────────
-
+// TEST: Successful read
 func TestReturnsFirstPageWithNoSKParam(t *testing.T) {
 	items := buildWorkoutItems("user-123", 20)
 	mock := &mockDynamo{
@@ -209,8 +228,7 @@ func TestNoSKParamMeansNoExclusiveStartKey(t *testing.T) {
 	}
 }
 
-// ── Tests: Pagination (with SK cursor) ───────────────────────────────────────
-
+// TEST: Pagination Read
 func TestUsesSKParamAsExclusiveStartKey(t *testing.T) {
 	cursor := "WORKOUT#2026-03-01T10:00:00.000Z#wkt-001"
 	mock := &mockDynamo{
@@ -294,8 +312,7 @@ func TestNextSKIsNullWhenNoMorePages(t *testing.T) {
 	}
 }
 
-// ── Tests: DynamoDB query parameters ─────────────────────────────────────────
-
+// TEST: DynamoDB query parameters
 func TestQueryUsesCorrectTableName(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "MyWorkoutsTable")
@@ -367,8 +384,7 @@ func TestQueryScopedToCurrentUser(t *testing.T) {
 	}
 }
 
-// ── Tests: Empty result ───────────────────────────────────────────────────────
-
+// Tests: Empty result
 func TestReturnsEmptyArrayWhenNoWorkouts(t *testing.T) {
 	mock := &mockDynamo{
 		queryFunc: func(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
@@ -395,8 +411,7 @@ func TestReturnsEmptyArrayWhenNoWorkouts(t *testing.T) {
 	}
 }
 
-// ── Tests: DynamoDB error ─────────────────────────────────────────────────────
-
+// TEST: DynamoDB error
 func TestDynamoDBQueryError(t *testing.T) {
 	mock := &mockDynamo{
 		queryFunc: func(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
@@ -418,8 +433,7 @@ func TestDynamoDBQueryError(t *testing.T) {
 	}
 }
 
-// ── Tests: Response format ────────────────────────────────────────────────────
-
+// TEST: Response format
 func TestResponseHasJSONContentType(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
@@ -440,8 +454,7 @@ func TestErrorResponseHasJSONContentType(t *testing.T) {
 	}
 }
 
-// ── Tests: Workout fields are returned correctly ──────────────────────────────
-
+// TEST: Workout fields are returned correctly
 func TestWorkoutFieldsAreUnmarshalled(t *testing.T) {
 	reps := 10
 	weight := 80.0
