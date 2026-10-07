@@ -60,6 +60,17 @@ jobs:
       - name: Build Function
         run: make ${{ matrix.function }}
 
+      - name: Generate Secret Name
+        id: secret
+        run: |
+          SECRET_NAME="AWS_LAMBDA_ARN_${MATRIX_FUNCTION//-/_}"
+          echo "name=$SECRET_NAME" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX_FUNCTION: ${{ matrix.function }}
+
       - name: Deploy Lambda Function
-        run: aws lambda update-function-code --function-name ${{ secrets[format('AWS_LAMBDA_{0}_ARN', replace(matrix.function, '-', '_'))] }} --zip-file fileb://build/${{ matrix.function }}.zip
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ secrets[steps.secret.outputs.name] }}" \
+            --zip-file "fileb://build/${{ matrix.function }}.zip"
 
