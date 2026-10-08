@@ -1,7 +1,8 @@
-package main
+package handler
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -29,15 +30,21 @@ func (m *mockCognito) AdminCreateUser(ctx context.Context, params *cognitoidenti
 	return &cognitoidentityprovider.AdminCreateUserOutput{}, nil
 }
 
-func makeRequest(body string) events.APIGatewayProxyRequest {
+func makeUnEncodedRequest(body string) events.APIGatewayProxyRequest {
 	return events.APIGatewayProxyRequest{
 		Body: body,
 	}
 }
 
+func makeRequest(body string) events.APIGatewayProxyRequest {
+	return events.APIGatewayProxyRequest{
+		Body: base64.StdEncoding.EncodeToString([]byte(body)),
+	}
+}
+
 func makeHtmxRequest(body string) events.APIGatewayProxyRequest {
 	return events.APIGatewayProxyRequest{
-		Body:    body,
+		Body:    base64.StdEncoding.EncodeToString([]byte(body)),
 		Headers: map[string]string{"HX-Request": "true"},
 	}
 }
@@ -194,7 +201,7 @@ func TestSuccessfulRegistrationHtmx(t *testing.T) {
 	if !strings.Contains(resp.Body, "register-success") {
 		t.Errorf("expected HTML response with register-success class, got %q", resp.Body)
 	}
-	if !strings.Contains(resp.Body, "Check your email") {
+	if !strings.Contains(resp.Body, "An email will be sent") {
 		t.Errorf("expected HTML response with success message, got %q", resp.Body)
 	}
 }
@@ -294,6 +301,25 @@ func TestUsesCorrectUserPoolID(t *testing.T) {
 	}
 }
 
+func TestSuppressEmailForRegistration(t *testing.T) {
+	mock := &mockCognito{}
+	h := NewHandler(mock, "eu-west-2_TestPool", false)
+	resp, err := h.HandleRequest(context.Background(), makeRequest("email=email@email.com"))
+
+	if err != nil {
+		t.Errorf("Unexpected error: %q", err.Error())
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	body := parseJSONBody(t, resp.Body)
+	if body["message"] != "thanks for registering your interest" {
+		t.Errorf("expected message 'thanks for registering your interest', got %q", body["message"])
+	}
+}
+
 // ── Tests: User already exists ──────────────────────────────────────────────
 
 func TestReturnsSuccessWhenUserAlreadyExists(t *testing.T) {
@@ -382,6 +408,24 @@ func TestHtmxResponseHasHTMLContentType(t *testing.T) {
 	resp, _ := h.HandleRequest(context.Background(), makeHtmxRequest("email=test@example.com"))
 	if resp.Headers["Content-Type"] != "text/html" {
 		t.Errorf("expected Content-Type 'text/html', got %q", resp.Headers["Content-Type"])
+	}
+}
+
+// Test: throwing if the request is not base64 encoded
+func TestThrowIfNotEncoded(t *testing.T) {
+	mock := &mockCognito{}
+	h := NewHandler(mock, "eu-west-2_TestPool", false)
+
+	resp, _ := h.HandleRequest(context.Background(), makeUnEncodedRequest("mockRequest"))
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+	}
+
+	parsedBody := parseJSONBody(t, resp.Body)
+	expectedMessage := "decoding base64 string"
+	if parsedBody["error"] != expectedMessage {
+		t.Errorf("expected error message %q, got %q", expectedMessage, parsedBody["error"])
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
+	"dybev.uk/workout-tracker/functions/register-interest/handler"
 )
 
 func main() {
@@ -20,14 +21,12 @@ func main() {
 
 	client := cognitoidentityprovider.NewFromConfig(cfg)
 
-	// Control whether Cognito should send the temporary password invite.
-	// Default to sending invites unless SEND_INVITES is explicitly set to "false" or "0".
 	sendInvites := true
 	if v := os.Getenv("SEND_INVITES"); v == "false" || v == "0" {
 		sendInvites = false
 	}
 
-	h := NewHandler(client, userPoolID, sendInvites)
+	h := handler.NewHandler(client, userPoolID, sendInvites)
 
 	lambda.Start(h.HandleRequest)
 }

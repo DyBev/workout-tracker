@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -16,29 +16,20 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 )
 
-// CognitoUserCreator is the subset of the Cognito client that this handler needs.
 type CognitoUserCreator interface {
 	AdminCreateUser(ctx context.Context, params *cognitoidentityprovider.AdminCreateUserInput, optFns ...func(*cognitoidentityprovider.Options)) (*cognitoidentityprovider.AdminCreateUserOutput, error)
 }
 
-// Handler holds the dependencies injected at startup.
 type Handler struct {
 	cognito    CognitoUserCreator
 	userPoolID string
-	// sendInvites controls whether Cognito should send the temporary password
-	// email when a user is created. Set to false to suppress emails (useful
-	// for delaying invites until public release).
 	sendInvites bool
 }
 
-// NewHandler creates a Handler with the given Cognito client and user pool ID.
 func NewHandler(cognito CognitoUserCreator, userPoolID string, sendInvites bool) *Handler {
 	return &Handler{cognito: cognito, userPoolID: userPoolID, sendInvites: sendInvites}
 }
 
-// HandleRequest processes the API Gateway proxy request.
-// This endpoint is unauthenticated — it creates a Cognito user from an email
-// address and relies on Cognito to send them a reset-password invitation.
 func (h *Handler) HandleRequest(
 	ctx context.Context,
 	req events.APIGatewayProxyRequest,
@@ -56,8 +47,6 @@ func (h *Handler) HandleRequest(
 
 	err = h.createUser(ctx, registerReq.Email)
 	if err != nil {
-		// If the user already exists, treat it as success so we don't
-		// leak information about which emails are registered.
 		var usernameExists *types.UsernameExistsException
 		if errors.As(err, &usernameExists) {
 			return successResponse(htmx), nil
@@ -68,8 +57,6 @@ func (h *Handler) HandleRequest(
 	return successResponse(htmx), nil
 }
 
-// createUser calls Cognito AdminCreateUser to invite the user.
-// The user receives a temporary password via email and must reset it on first sign-in.
 func (h *Handler) createUser(ctx context.Context, email string) error {
 	input := &cognitoidentityprovider.AdminCreateUserInput{
 		UserPoolId: aws.String(h.userPoolID),
@@ -89,8 +76,6 @@ func (h *Handler) createUser(ctx context.Context, email string) error {
 		},
 	}
 
-	// If invites are disabled, tell Cognito to suppress the invitation
-	// message so no temporary password email is sent.
 	if !h.sendInvites {
 		input.MessageAction = types.MessageActionTypeSuppress
 	}
@@ -113,7 +98,6 @@ func parseRequest(body string) (RegisterRequest, error) {
 		return RegisterRequest{}, errors.New("request body is empty")
 	}
 
-	// Expect application/x-www-form-urlencoded body like "email=you@example.com".
 	vals, err := url.ParseQuery(trimmed)
 	if err != nil {
 		return RegisterRequest{}, fmt.Errorf("invalid form body: %w", err)
@@ -131,7 +115,6 @@ func parseRequest(body string) (RegisterRequest, error) {
 	return req, nil
 }
 
-// isValidEmail performs a basic structural check on the email address.
 func isValidEmail(email string) bool {
 	at := strings.Index(email, "@")
 	if at < 1 {
@@ -142,13 +125,10 @@ func isValidEmail(email string) bool {
 	return dot > 0 && dot < len(domain)-1
 }
 
-// isHtmxRequest checks if the request was made by htmx.
 func isHtmxRequest(req events.APIGatewayProxyRequest) bool {
 	return req.Headers["hx-request"] == "true" || req.Headers["HX-Request"] == "true"
 }
 
-// successResponse returns an appropriate success response based on whether
-// the request came from htmx or a regular API client.
 func successResponse(htmx bool) events.APIGatewayProxyResponse {
 	if htmx {
 		return events.APIGatewayProxyResponse{
@@ -162,8 +142,6 @@ func successResponse(htmx bool) events.APIGatewayProxyResponse {
 	})
 }
 
-// errorResponse returns an appropriate error response based on whether
-// the request came from htmx or a regular API client.
 func errorResponse(statusCode int, msg string, htmx bool) events.APIGatewayProxyResponse {
 	if htmx {
 		return events.APIGatewayProxyResponse{
@@ -175,7 +153,6 @@ func errorResponse(statusCode int, msg string, htmx bool) events.APIGatewayProxy
 	return jsonResponse(statusCode, errorBody(msg))
 }
 
-// jsonResponse builds an APIGatewayProxyResponse with a JSON body.
 func jsonResponse(statusCode int, body any) events.APIGatewayProxyResponse {
 	b, _ := json.Marshal(body)
 	return events.APIGatewayProxyResponse{
@@ -185,7 +162,6 @@ func jsonResponse(statusCode int, body any) events.APIGatewayProxyResponse {
 	}
 }
 
-// errorBody produces a simple JSON error object.
 func errorBody(msg string) map[string]string {
 	return map[string]string{"error": msg}
 }
