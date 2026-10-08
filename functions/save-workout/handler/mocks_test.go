@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
@@ -22,3 +23,4 @@ func (m *mockDynamo) BatchWriteItem(ctx context.Context, params *dynamodb.BatchW
 	return &dynamodb.BatchWriteItemOutput{}, nil
 }
 
+var mockAttributeValueMapper = attributevalue.MarshalMap

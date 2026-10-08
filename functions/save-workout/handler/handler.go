@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -27,18 +26,33 @@ const (
 // DynamoBatchWriter is the subset of the DynamoDB client that this handler needs.
 // Using an interface makes the handler easy to test with a mock.
 type DynamoBatchWriter interface {
-	BatchWriteItem(ctx context.Context, params *dynamodb.BatchWriteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.BatchWriteItemOutput, error)
+	BatchWriteItem(
+		ctx context.Context,
+		params *dynamodb.BatchWriteItemInput,
+		optFns ...func(*dynamodb.Options),
+	) (*dynamodb.BatchWriteItemOutput, error)
 }
+
+type DynamoAttributeMarshalMap = func (in any) (map[string]types.AttributeValue, error)
 
 // Handler holds the dependencies injected at startup.
 type Handler struct {
 	db        DynamoBatchWriter
 	tableName string
+	attributeMarshalMap DynamoAttributeMarshalMap
 }
 
 // NewHandler creates a Handler with the given DynamoDB client and table name.
-func NewHandler(db DynamoBatchWriter, tableName string) *Handler {
-	return &Handler{db: db, tableName: tableName}
+func NewHandler(
+	db DynamoBatchWriter,
+	attributeMarshalMap DynamoAttributeMarshalMap,
+	tableName string,
+) *Handler {
+	return &Handler{
+		db: db,
+		attributeMarshalMap: attributeMarshalMap,
+		tableName: tableName,
+	}
 }
 
 // HandleRequest processes the API Gateway proxy request.
@@ -82,6 +96,7 @@ func (h *Handler) HandleRequest(
 		return response(http.StatusInternalServerError, errorBody("failed to save workouts")), err
 	}
 
+	successes := 0
 	results := make([]SaveResult, len(workouts))
 	for i, w := range workouts {
 		if failed[w.WorkoutID] {
@@ -91,11 +106,19 @@ func (h *Handler) HandleRequest(
 				Error:     "failed to save workout",
 			}
 		} else {
+			successes += 1
 			results[i] = SaveResult{
 				WorkoutID: w.WorkoutID,
 				Status:    "saved",
 			}
 		}
+	}
+
+	if successes == 0 {
+		return response(http.StatusInternalServerError, map[string]any{
+			"message": "batch complete",
+			"results": results,
+		}), nil
 	}
 
 	return response(http.StatusCreated, map[string]any{
@@ -155,7 +178,7 @@ func (h *Handler) buildWriteRequests(workouts []Workout) ([]types.WriteRequest, 
 	idByItem := make(map[string]string, len(workouts))
 
 	for i := range workouts {
-		item, err := attributevalue.MarshalMap(&workouts[i])
+		item, err := h.attributeMarshalMap(&workouts[i])
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal workout %d: %w", i, err)
 		}

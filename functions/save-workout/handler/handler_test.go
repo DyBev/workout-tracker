@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -14,7 +16,7 @@ import (
 // TEST: happy path
 func TestSaveArray(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "mockTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "mockTable")
 	resp, _ := h.HandleRequest(context.Background(), makeRequest(http.MethodPost, []Workout{ 
 		validWorkout("W1", ""),
 		validWorkout("W2", ""),
@@ -37,7 +39,7 @@ func TestSaveArray(t *testing.T) {
 
 func TestSaveSingle(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "mockTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "mockTable")
 	resp, _ := h.HandleRequest(context.Background(), makeRequestSingleWorkout(http.MethodPost,
 		validWorkout("W1", ""),
 	))
@@ -58,7 +60,7 @@ func TestSaveSingle(t *testing.T) {
 
 func TestSaveSingleWithSpaceNoteFormatting(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "mockTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "mockTable")
 	resp, _ := h.HandleRequest(context.Background(), makeRequest(http.MethodPost, []Workout{
 		validWorkoutWithSet("W1", []WorkoutExercise{
 			validExerciseWithNote("Ex1", 1, []WorkoutSet{}, "   "),
@@ -95,7 +97,7 @@ func TestSaveBatching(t *testing.T) {
 			return &dynamodb.BatchWriteItemOutput{}, nil
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	var WorkoutArray []Workout;
 	for i := range 30 {
@@ -150,7 +152,7 @@ func TestReportsFailedExercises(t *testing.T) {
 			return &dynamodb.BatchWriteItemOutput{}, nil
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	var WorkoutArray []Workout;
 	for i := range 2 {
@@ -194,7 +196,7 @@ func TestSaveRetries(t *testing.T) {
 			return &dynamodb.BatchWriteItemOutput{}, nil
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	var WorkoutArray []Workout;
 	for i := range 30 {
@@ -230,7 +232,7 @@ func TestSaveRetries(t *testing.T) {
 // TEST: unhappy path tableName undefined
 func TestTableNameUndefined(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "")
+	h := NewHandler(mock, mockAttributeValueMapper, "")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(http.MethodPost, []Workout{ validWorkout("W1", "") }))
 
 	if err != nil {
@@ -250,7 +252,7 @@ func TestTableNameUndefined(t *testing.T) {
 
 func TestSaveSingleWithEmptyNote(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "mockTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "mockTable")
 	resp, _ := h.HandleRequest(context.Background(), makeRequestSingleWorkout(http.MethodPost,
 		validWorkout("W1", "  "),
 	))
@@ -272,7 +274,7 @@ func TestSaveSingleWithEmptyNote(t *testing.T) {
 // TEST: unhappy path unauthorized user
 func TestRejectsUnauthenticated(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
 		http.MethodPost,
@@ -292,7 +294,7 @@ func TestRejectsUnauthenticated(t *testing.T) {
 
 func TestRejectsUnauthenticatedMissingJWT(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
 		http.MethodPost,
@@ -313,7 +315,7 @@ func TestRejectsUnauthenticatedMissingJWT(t *testing.T) {
 
 func TestRejectsUnauthenticatedMissingClaims(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
 		http.MethodPost,
@@ -336,7 +338,7 @@ func TestRejectsUnauthenticatedMissingClaims(t *testing.T) {
 
 func TestRejectsUnauthenticatedMissingSub(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
 		http.MethodPost,
 		[]Workout{},
@@ -360,7 +362,7 @@ func TestRejectsUnauthenticatedMissingSub(t *testing.T) {
 
 func TestRejectsUnauthenticatedMalformedSub(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
 		http.MethodPost,
 		[]Workout{},
@@ -387,7 +389,7 @@ func TestRejectsUnauthenticatedMalformedSub(t *testing.T) {
 // TEST: unhappy path parseAndValidateBody
 func TestRejectsInvalidEmptyBody(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
 		http.MethodPost,
 		"",
@@ -404,7 +406,7 @@ func TestRejectsInvalidEmptyBody(t *testing.T) {
 
 func TestRejectsInvalidJSONBody(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
 		http.MethodPost,
 		"SomeRandoNonJSONString",
@@ -421,7 +423,7 @@ func TestRejectsInvalidJSONBody(t *testing.T) {
 
 func TestRejectsMalformedJSONBody(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
 		http.MethodPost,
 		"[",
@@ -438,7 +440,7 @@ func TestRejectsMalformedJSONBody(t *testing.T) {
 
 func TestRejectsEmptyArrayJSONBody(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
 		http.MethodPost,
 		"[]",
@@ -455,7 +457,7 @@ func TestRejectsEmptyArrayJSONBody(t *testing.T) {
 
 func TestRejectsBodyMissingWorkoutID(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -474,7 +476,7 @@ func TestRejectsBodyMissingWorkoutID(t *testing.T) {
 
 func TestRejectsBodyMissingStartedAt(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -493,7 +495,7 @@ func TestRejectsBodyMissingStartedAt(t *testing.T) {
 
 func TestRejectsBodyMissingUpdatedAt(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -512,7 +514,7 @@ func TestRejectsBodyMissingUpdatedAt(t *testing.T) {
 
 func TestRejectsBodyMissingCreatedAt(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -531,7 +533,7 @@ func TestRejectsBodyMissingCreatedAt(t *testing.T) {
 
 func TestRejectsBodyMissingWorkoutIDSingleWorkout(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequestSingleWorkout(
 		http.MethodPost,
 		invalidWorkoutNoID(),
@@ -548,7 +550,7 @@ func TestRejectsBodyMissingWorkoutIDSingleWorkout(t *testing.T) {
 
 func TestRejectsBodyMissingWorkoutExerciseID(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -567,7 +569,7 @@ func TestRejectsBodyMissingWorkoutExerciseID(t *testing.T) {
 
 func TestRejectsBodyMissingWorkoutName(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -588,7 +590,7 @@ func TestRejectsBodyMissingWorkoutName(t *testing.T) {
 
 func TestRejectsBodyLongNote(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -609,7 +611,7 @@ func TestRejectsBodyLongNote(t *testing.T) {
 
 func TestRejectsBodyInvalidSet(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "testTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
 	resp, err := h.HandleRequest(context.Background(), makeRequest(
 		http.MethodPost,
 		[]Workout{
@@ -629,3 +631,97 @@ func TestRejectsBodyInvalidSet(t *testing.T) {
 }
 
 // TEST: unhappy path SaveWorkouts
+func TestSaveWorkoutsBuildWriteRequestsError(t *testing.T) {
+	mock := &mockDynamo{}
+	var mockAttributeValueMapperError = func(
+		in any,
+	) (map[string]types.AttributeValue, error) {
+		return map[string]types.AttributeValue{}, errors.New("Mock random error!")
+	}
+	h := NewHandler(mock, mockAttributeValueMapperError, "table name")
+	resp, _ := h.HandleRequest(context.Background(), makeRequest(http.MethodPost, []Workout{
+		validWorkout("w1", ""),
+	}))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status %q, got %q", http.StatusInternalServerError, resp.StatusCode);
+	}
+}
+
+// TEST: unhappy path BatchWriteFailure
+func TestSaveWorkoutBatchWriteFailure(t *testing.T) {
+	mock := &mockDynamo{
+		batchWriteFunc: func(ctx context.Context, params *dynamodb.BatchWriteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.BatchWriteItemOutput, error) {
+			return nil, errors.New("service unavailable")
+		},
+	}
+	h := NewHandler(mock, mockAttributeValueMapper, "table name")
+	resp, _ := h.HandleRequest(context.Background(), makeRequest(http.MethodPut, []Workout{
+		validWorkout("w1", ""),
+	}))
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status %q, got %q", http.StatusInternalServerError, resp.StatusCode);
+	}
+}
+
+// TEST: unhappy path BatchWriteFailure retries exhausted
+func TestSaveWorkoutBatchWriteRetriesExhausted(t *testing.T) {
+	callCount := 0
+	mock := &mockDynamo{
+		batchWriteFunc: func(
+			ctx context.Context,
+			params *dynamodb.BatchWriteItemInput,
+			optFns ...func(*dynamodb.Options),
+		) (*dynamodb.BatchWriteItemOutput, error) {
+			callCount++
+			return &dynamodb.BatchWriteItemOutput{
+				UnprocessedItems: params.RequestItems,
+			}, nil
+		},
+	}
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
+
+	resp, _ := h.HandleRequest(context.Background(), makeRequest(http.MethodPost, []Workout{
+		validWorkout("w1", ""),
+	}))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
+	}
+
+	if callCount != 4 {
+		t.Errorf("expected 4 BatchWriteItem calls (1 + 3 retries), got %d", callCount)
+	}
+}
+
+// TEST: unhappy path context expiry
+func TestSaveWorkoutContexExpiry(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+    // Cancel the context after 100 milliseconds.
+    go func() {
+        time.Sleep(100 * time.Millisecond)
+        cancel()
+    }()
+
+	mock := &mockDynamo{
+		batchWriteFunc: func(
+			ctx context.Context,
+			params *dynamodb.BatchWriteItemInput,
+			optFns ...func(*dynamodb.Options),
+		) (*dynamodb.BatchWriteItemOutput, error) {
+			return &dynamodb.BatchWriteItemOutput{
+				UnprocessedItems: params.RequestItems,
+			}, nil
+		},
+	}
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
+
+	resp, _ := h.HandleRequest(ctx, makeRequest(http.MethodPost, []Workout{
+		validWorkout("w1", ""),
+	}))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
+	}
+}
