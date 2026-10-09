@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -53,13 +53,16 @@ func (h *Handler) HandleRequest(
 		if !ok {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
+		if userID == "" {
+			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+		}
 	} else {
 		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 	}
 
 	exercises, err := h.queryExercises(ctx, userID)
 	if err != nil {
-		return response(http.StatusInternalServerError, errorBody("failed to read exercises")), err
+		return response(http.StatusInternalServerError, errorBody("failed to read exercises")), nil
 	}
 
 	return response(http.StatusOK, map[string]any{

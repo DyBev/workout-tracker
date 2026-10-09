@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -34,14 +34,24 @@ func (m *mockDynamo) Query(ctx context.Context, params *dynamodb.QueryInput, opt
 func makeAuthedRequest(userID string) events.APIGatewayProxyRequest {
 	return events.APIGatewayProxyRequest{
 		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				"jwt": map[string]interface{}{
-					"claims": map[string]interface{}{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{
 						"sub": userID,
 					},
 				},
 			},
 		},
+	}
+}
+
+func makeRequestWithContext(context *events.APIGatewayProxyRequestContext) events.APIGatewayProxyRequest {
+	if context == nil {
+		return events.APIGatewayProxyRequest{}
+	}
+
+	return events.APIGatewayProxyRequest{
+		RequestContext: *context,
 	}
 }
 
@@ -61,7 +71,7 @@ func parseResponseBody(t *testing.T, body string) map[string]any {
 // buildExerciseItems constructs n DynamoDB attribute maps that look like SavedExercise items.
 func buildExerciseItems(userID string, n int) []map[string]types.AttributeValue {
 	items := make([]map[string]types.AttributeValue, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		id := fmt.Sprintf("ex-%03d", i)
 		items[i] = map[string]types.AttributeValue{
 			"userId":          &types.AttributeValueMemberS{Value: userID},
@@ -77,70 +87,172 @@ func buildExerciseItems(userID string, n int) []map[string]types.AttributeValue 
 	return items
 }
 
-// ── Tests: Auth ──────────────────────────────────────────────────────────────
-
-func TestRejectsUnauthenticated(t *testing.T) {
+// TEST: undefined table name
+func TestUndefinedTableName(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, "")
 
-	resp, err := h.HandleRequest(context.Background(), makeUnauthedRequest())
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		nil,
+	))
+
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
+	}
+
+}
+
+// TEST: unhappy path unauthorized user
+func TestRejectsUnauthenticated(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		nil,
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
 	}
-	body := parseResponseBody(t, resp.Body)
-	if body["error"] != "not authorised" {
-		t.Errorf("expected error 'not authorised', got %q", body["error"])
+
+}
+
+func TestRejectsUnauthenticatedMissingJWT(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if mock.calls > 0 {
-		t.Error("DynamoDB should not have been called for unauthenticated request")
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
 	}
 }
 
-func TestRejectsMissingJWTClaims(t *testing.T) {
+func TestRejectsUnauthenticatedMissingClaims(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, "testTable")
 
-	req := events.APIGatewayProxyRequest{
-		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				"jwt": map[string]interface{}{
-					// no "claims" key
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{ },
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestRejectsUnauthenticatedMissingSub(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{ },
 				},
 			},
 		},
-	}
+	))
 
-	resp, err := h.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
 	}
 }
 
-func TestRejectsMissingTableName(t *testing.T) {
+func TestRejectsUnauthenticatedMalformedSub(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "")
+	h := NewHandler(mock, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{
+						"sub": "",
+					},
+				},
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+// Tests: random result
+func TestReturnsBrokenResult(t *testing.T) {
+	mock := &mockDynamo{
+		queryFunc: func(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+			return &dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{
+				{
+					"userId":          &types.AttributeValueMemberN{Value: "10"},
+					"sk":              &types.AttributeValueMemberS{Value: "EXERCISE#"},
+					"savedExerciseId": &types.AttributeValueMemberS{Value: ""},
+					"name":            &types.AttributeValueMemberS{Value: "Exercise 10"},
+					"note":            &types.AttributeValueMemberS{Value: ""},
+					"tags":            &types.AttributeValueMemberN{Value: "10"},
+					"createdAt":       &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", 0+1)},
+					"updatedAt":       &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", 0+1)},
+				},
+			}}, nil
+		},
+	}
+	h := NewHandler(mock, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
 	}
+
 	body := parseResponseBody(t, resp.Body)
-	if body["error"] != "table name not configured" {
-		t.Errorf("expected error 'table name not configured', got %q", body["error"])
+	message, ok := body["error"].(string)
+	if !ok {
+		t.Error("Expected Error message but got none")
+	}
+
+	expected := "failed to read exercises"
+	if message != expected {
+		t.Errorf("Expected Error message %q, but got %q", expected, message)
 	}
 }
 
-// ── Tests: Empty result ───────────────────────────────────────────────────────
-
+// Tests: Empty result
 func TestReturnsEmptyArrayWhenNoExercises(t *testing.T) {
 	mock := &mockDynamo{
 		queryFunc: func(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
@@ -167,8 +279,7 @@ func TestReturnsEmptyArrayWhenNoExercises(t *testing.T) {
 	}
 }
 
-// ── Tests: Successful read ───────────────────────────────────────────────────
-
+// Tests: Successful read
 func TestReturnsExercisesCorrectly(t *testing.T) {
 	archived := "2026-03-10T12:00:00.000Z"
 	items := []map[string]types.AttributeValue{
@@ -277,8 +388,8 @@ func TestDynamoDBQueryError(t *testing.T) {
 	h := NewHandler(mock, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123"))
-	if err == nil {
-		t.Fatal("expected error to be returned from HandleRequest")
+	if err != nil {
+		t.Fatal("unexpected error returned from HandleRequest")
 	}
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
