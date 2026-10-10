@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -7,148 +7,38 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// mockDynamo implements DynamoBatchWriter for testing.
-type mockDynamo struct {
-	batchWriteFunc func(ctx context.Context, params *dynamodb.BatchWriteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.BatchWriteItemOutput, error)
-	calls          int
-	lastInput      *dynamodb.BatchWriteItemInput
-}
-
-func (m *mockDynamo) BatchWriteItem(ctx context.Context, params *dynamodb.BatchWriteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.BatchWriteItemOutput, error) {
-	m.calls++
-	m.lastInput = params
-	if m.batchWriteFunc != nil {
-		return m.batchWriteFunc(ctx, params, optFns...)
-	}
-	return &dynamodb.BatchWriteItemOutput{}, nil
-}
-
-func makeAuthedRequest(userID string, body string) events.APIGatewayProxyRequest {
-	return events.APIGatewayProxyRequest{
-		Body: body,
-		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				"jwt": map[string]interface{}{
-					"claims": map[string]interface{}{
-						"sub": userID,
-					},
-				},
-			},
-		},
-	}
-}
-
-func makeUnauthedRequest(body string) events.APIGatewayProxyRequest {
-	return events.APIGatewayProxyRequest{
-		Body: body,
-	}
-}
-
-func parseResponseBody(t *testing.T, body string) map[string]any {
-	t.Helper()
-	var m map[string]any
-	if err := json.Unmarshal([]byte(body), &m); err != nil {
-		t.Fatalf("failed to parse response body: %v", err)
-	}
-	return m
-}
-
-func parseBatchResponseBody(t *testing.T, body string) (string, []SaveResult) {
-	t.Helper()
-	var m struct {
-		Message string       `json:"message"`
-		Results []SaveResult `json:"results"`
-	}
-	if err := json.Unmarshal([]byte(body), &m); err != nil {
-		t.Fatalf("failed to parse batch response body: %v", err)
-	}
-	return m.Message, m.Results
-}
-
-func validExerciseJSON() string {
-	ex := SavedExercise{
-		SavedExerciseID: "abc123",
-		Name:            "Bench Press",
-		Note:            "Keep elbows tucked",
-		Tags:            []string{"chest", "push"},
-		CreatedAt:       "2026-03-01T10:00:00.000Z",
-		UpdatedAt:       "2026-03-15T14:30:00.000Z",
-	}
-	b, _ := json.Marshal(ex)
-	return string(b)
-}
-
-func validExerciseArrayJSON() string {
-	exercises := []SavedExercise{
-		{
-			SavedExerciseID: "abc123",
-			Name:            "Bench Press",
-			Note:            "Keep elbows tucked",
-			Tags:            []string{"chest", "push"},
-			CreatedAt:       "2026-03-01T10:00:00.000Z",
-			UpdatedAt:       "2026-03-15T14:30:00.000Z",
-		},
-	}
-	b, _ := json.Marshal(exercises)
-	return string(b)
-}
-
-func multipleExercisesJSON() string {
-	exercises := []SavedExercise{
-		{
-			SavedExerciseID: "abc123",
-			Name:            "Bench Press",
-			Note:            "Keep elbows tucked",
-			Tags:            []string{"chest", "push"},
-			CreatedAt:       "2026-03-01T10:00:00.000Z",
-			UpdatedAt:       "2026-03-15T14:30:00.000Z",
-		},
-		{
-			SavedExerciseID: "def456",
-			Name:            "Squat",
-			Note:            "Full depth",
-			Tags:            []string{"legs"},
-			CreatedAt:       "2026-03-02T10:00:00.000Z",
-			UpdatedAt:       "2026-03-16T14:30:00.000Z",
-		},
-	}
-	b, _ := json.Marshal(exercises)
-	return string(b)
-}
-
-// ── Tests: Auth ──────────────────────────────────────────────────────────────
-
-func TestRejectsUnauthenticated(t *testing.T) {
+// TEST: unhappy path tableName undefined
+func TestTableNameUndefined(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "")
+	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest(http.MethodPost, validExerciseArrayJSON()))
 
-	resp, err := h.HandleRequest(context.Background(), makeUnauthedRequest(validExerciseArrayJSON()))
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("Unexpected Error: %q", err.Error())
 	}
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("Expected status %q, got %q", http.StatusInternalServerError, resp.StatusCode)
 	}
-	body := parseResponseBody(t, resp.Body)
-	if body["error"] != "not authorised" {
-		t.Errorf("expected error 'not authorised', got %q", body["error"])
-	}
-	if mock.calls > 0 {
-		t.Error("DynamoDB should not have been called for unauthenticated request")
+
+	message := parseErrorResponseBody(t, resp.Body)
+	expectedErrorMessage := "table name not configured"
+	if message["error"] != expectedErrorMessage {
+		t.Fatalf("Expected error message: %q, got: %q", expectedErrorMessage, message["error"])
 	}
 }
 
 // ── Tests: Request body validation ──────────────────────────────────────────
-
 func TestRejectsEmptyBody(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", ""))
 	if err != nil {
@@ -158,14 +48,14 @@ func TestRejectsEmptyBody(t *testing.T) {
 		t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
 	}
 	body := parseResponseBody(t, resp.Body)
-	if body["error"] != "request body is empty" {
-		t.Errorf("expected 'request body is empty', got %q", body["error"])
+	if body.Error != "request body is empty" {
+		t.Errorf("expected 'request body is empty', got %q", body.Error)
 	}
 }
 
 func TestRejectsEmptyArray(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", "[]"))
 	if err != nil {
@@ -175,14 +65,14 @@ func TestRejectsEmptyArray(t *testing.T) {
 		t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
 	}
 	body := parseResponseBody(t, resp.Body)
-	if body["error"] != "exercise array is empty" {
-		t.Errorf("expected 'exercise array is empty', got %q", body["error"])
+	if body.Error != "exercise array is empty" {
+		t.Errorf("expected 'exercise array is empty', got %q", body.Error)
 	}
 }
 
 func TestRejectsMissingSavedExerciseId(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	payload := `[{"name":"Bench Press","createdAt":"t","updatedAt":"t"}]`
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", payload))
@@ -194,14 +84,14 @@ func TestRejectsMissingSavedExerciseId(t *testing.T) {
 	}
 	body := parseResponseBody(t, resp.Body)
 	expected := "exercises[0]: missing required fields: savedExerciseId"
-	if body["error"] != expected {
-		t.Errorf("expected error %q, got %q", expected, body["error"])
+	if body.Error != expected {
+		t.Errorf("expected error %q, got %q", expected, body.Error)
 	}
 }
 
 func TestRejectsMissingName(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	payload := `[{"savedExerciseId":"abc","createdAt":"t","updatedAt":"t"}]`
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", payload))
@@ -213,14 +103,14 @@ func TestRejectsMissingName(t *testing.T) {
 	}
 	body := parseResponseBody(t, resp.Body)
 	expected := "exercises[0]: missing required fields: name"
-	if body["error"] != expected {
-		t.Errorf("expected error %q, got %q", expected, body["error"])
+	if body.Error != expected {
+		t.Errorf("expected error %q, got %q", expected, body.Error)
 	}
 }
 
 func TestRejectsMissingCreatedAt(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	payload := `[{"savedExerciseId":"abc","name":"Bench","updatedAt":"t"}]`
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", payload))
@@ -232,14 +122,14 @@ func TestRejectsMissingCreatedAt(t *testing.T) {
 	}
 	body := parseResponseBody(t, resp.Body)
 	expected := "exercises[0]: missing required fields: createdAt"
-	if body["error"] != expected {
-		t.Errorf("expected error %q, got %q", expected, body["error"])
+	if body.Error != expected {
+		t.Errorf("expected error %q, got %q", expected, body.Error)
 	}
 }
 
 func TestRejectsMissingUpdatedAt(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	payload := `[{"savedExerciseId":"abc","name":"Bench","createdAt":"t"}]`
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", payload))
@@ -251,8 +141,8 @@ func TestRejectsMissingUpdatedAt(t *testing.T) {
 	}
 	body := parseResponseBody(t, resp.Body)
 	expected := "exercises[0]: missing required fields: updatedAt"
-	if body["error"] != expected {
-		t.Errorf("expected error %q, got %q", expected, body["error"])
+	if body.Error != expected {
+		t.Errorf("expected error %q, got %q", expected, body.Error)
 	}
 }
 
@@ -260,7 +150,7 @@ func TestRejectsMissingUpdatedAt(t *testing.T) {
 
 func TestSaveSingleExercise(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseArrayJSON()))
 	if err != nil {
@@ -288,7 +178,7 @@ func TestSaveSingleExercise(t *testing.T) {
 
 func TestSaveMultipleExercises(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", multipleExercisesJSON()))
 	if err != nil {
@@ -324,7 +214,7 @@ func TestSaveMultipleExercises(t *testing.T) {
 
 func TestSetsUserIdFromJWT(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	h.HandleRequest(context.Background(), makeAuthedRequest("user-abc", validExerciseArrayJSON()))
 
@@ -340,7 +230,7 @@ func TestSetsUserIdFromJWT(t *testing.T) {
 
 func TestGeneratesCorrectSK(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseArrayJSON()))
 
@@ -362,11 +252,11 @@ func TestDynamoDBBatchWriteError(t *testing.T) {
 			return nil, errors.New("service unavailable")
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseArrayJSON()))
-	if err == nil {
-		t.Fatal("expected error to be returned")
+	if err != nil {
+		t.Errorf("unexpected error returned: %q", err.Error())
 	}
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
@@ -396,7 +286,7 @@ func TestReportsFailedExercises(t *testing.T) {
 			return &dynamodb.BatchWriteItemOutput{}, nil
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", multipleExercisesJSON()))
 	if err != nil {
@@ -425,7 +315,7 @@ func TestReportsFailedExercises(t *testing.T) {
 
 func TestTableNameIsPassedCorrectly(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "MyCustomTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "MyCustomTable")
 
 	h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseArrayJSON()))
 
@@ -438,7 +328,7 @@ func TestTableNameIsPassedCorrectly(t *testing.T) {
 
 func TestResponseHasJSONContentType(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, _ := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseArrayJSON()))
 	ct := resp.Headers["Content-Type"]
@@ -451,7 +341,7 @@ func TestResponseHasJSONContentType(t *testing.T) {
 
 func TestSaveSingleExerciseObject(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseJSON()))
 	if err != nil {
@@ -462,11 +352,13 @@ func TestSaveSingleExerciseObject(t *testing.T) {
 	}
 
 	body := parseResponseBody(t, resp.Body)
-	if body["message"] != "exercise saved" {
-		t.Errorf("expected message 'exercise saved', got %q", body["message"])
+	expected := "batch complete"
+	if body.Message != expected {
+		t.Errorf("expected message %q, got %q", expected, body.Message)
 	}
-	if body["savedExerciseId"] != "abc123" {
-		t.Errorf("expected savedExerciseId 'abc123', got %q", body["savedExerciseId"])
+
+	if !findExercise(body.Resutlts, "abc123") {
+		t.Errorf("expected savedExerciseId 'abc123', got %q", body.Resutlts)
 	}
 
 	if mock.calls != 1 {
@@ -476,7 +368,7 @@ func TestSaveSingleExerciseObject(t *testing.T) {
 
 func TestSingleObjectSetsUserIdFromJWT(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	h.HandleRequest(context.Background(), makeAuthedRequest("user-abc", validExerciseJSON()))
 
@@ -492,7 +384,7 @@ func TestSingleObjectSetsUserIdFromJWT(t *testing.T) {
 
 func TestSingleObjectGeneratesCorrectSK(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseJSON()))
 
@@ -508,7 +400,7 @@ func TestSingleObjectGeneratesCorrectSK(t *testing.T) {
 
 func TestSingleObjectRejectsMissingFields(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	payload := `{"name":"Bench Press","createdAt":"t","updatedAt":"t"}`
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", payload))
@@ -520,8 +412,8 @@ func TestSingleObjectRejectsMissingFields(t *testing.T) {
 	}
 	body := parseResponseBody(t, resp.Body)
 	expected := "missing required fields: savedExerciseId"
-	if body["error"] != expected {
-		t.Errorf("expected error %q, got %q", expected, body["error"])
+	if body.Error != expected {
+		t.Errorf("expected error %q, got %q", expected, body.Error)
 	}
 }
 
@@ -531,11 +423,11 @@ func TestSingleObjectDynamoDBError(t *testing.T) {
 			return nil, errors.New("service unavailable")
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseJSON()))
-	if err == nil {
-		t.Fatal("expected error to be returned")
+	if err != nil {
+		t.Errorf("unexpected error returned: %q", err.Error())
 	}
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
@@ -551,12 +443,13 @@ func TestSingleObjectUnprocessedReturnsError(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseJSON()))
-	if err == nil {
-		t.Fatal("expected error for exhausted retries on single exercise")
+	if err != nil {
+		t.Errorf("unexpected error for exhausted retries on single exercise: %q", err.Error())
 	}
+
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
 	}
@@ -564,7 +457,7 @@ func TestSingleObjectUnprocessedReturnsError(t *testing.T) {
 
 func TestSingleObjectStillWorksWithArrayInput(t *testing.T) {
 	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	// Array with one item should still return batch format.
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", validExerciseArrayJSON()))
@@ -599,7 +492,7 @@ func TestChunksLargeBatches(t *testing.T) {
 			return &dynamodb.BatchWriteItemOutput{}, nil
 		},
 	}
-	h := NewHandler(mock, "TestTable")
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
 
 	// Build 30 valid exercises.
 	exercises := make([]SavedExercise, 30)
@@ -637,5 +530,222 @@ func TestChunksLargeBatches(t *testing.T) {
 		if r.Status != "saved" {
 			t.Errorf("results[%d]: expected 'saved', got %q", i, r.Status)
 		}
+	}
+}
+
+// tests unhappy path auth
+func TestUnhappyUnauthenticated(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		http.MethodPost,
+		[]SavedExercise{},
+		nil,
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+
+}
+
+func TestUnhappyUnauthenticatedMissingJWT(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		http.MethodPost,
+		[]SavedExercise{},
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestUnhappyUnauthenticatedMissingClaims(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		http.MethodPost,
+		[]SavedExercise{},
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{ },
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestUnhappyUnauthenticatedMissingSub(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		http.MethodPost,
+		[]SavedExercise{},
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{ },
+				},
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestUnhappyUnauthenticatedMalformedSub(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		http.MethodPost,
+		[]SavedExercise{},
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{
+						"sub": "",
+					},
+				},
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+// tests unhappy path attributeValueMapper error
+func TestUnhappyAttributeValueMapperError(t *testing.T) {
+	mock := &mockDynamo{}
+	var mockAttributeValueMapperError = func(
+		in any,
+	) (map[string]types.AttributeValue, error) {
+		return map[string]types.AttributeValue{}, errors.New("Mock random error!")
+	}
+	h := NewHandler(mock, mockAttributeValueMapperError, "table name")
+	resp, _ := h.HandleRequest(context.Background(), makeAuthedRequest(http.MethodPost, validExerciseArrayJSON()))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status %q, got %q", http.StatusInternalServerError, resp.StatusCode);
+	}
+}
+
+// tests unhappy path malformed body array
+func TestUnhappyMalformedBodyArray(t *testing.T) {
+}
+
+// tests unhappy path malformed body single
+func TestUnhappyMalformedBodySingle(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
+		http.MethodPost,
+		"SomeRandoNonJSONString",
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+	}
+}
+
+func TestRejectsMalformedJSONBody(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
+		http.MethodPost,
+		"[",
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+	}
+}
+
+func TestRejectsEmptyArrayJSONBody(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, mockAttributeValueMapper, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithString(
+		http.MethodPost,
+		"[]",
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
+	}
+}
+
+
+// tests unhappy path context expiry
+func TestUnhappyContexExpiry(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+	}()
+
+	mock := &mockDynamo{
+		batchWriteFunc: func(
+			ctx context.Context,
+			params *dynamodb.BatchWriteItemInput,
+			optFns ...func(*dynamodb.Options),
+		) (*dynamodb.BatchWriteItemOutput, error) {
+			return &dynamodb.BatchWriteItemOutput{
+				UnprocessedItems: params.RequestItems,
+			}, nil
+		},
+	}
+	h := NewHandler(mock, mockAttributeValueMapper, "TestTable")
+
+	resp, _ := h.HandleRequest(ctx, makeAuthedRequest(http.MethodPost, validExerciseArrayJSON()))
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
 	}
 }

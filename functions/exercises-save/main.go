@@ -7,7 +7,10 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+
+	"dybev.uk/workout-tracker/functions/exercises-save/handler"
 )
 
 func main() {
@@ -19,7 +22,8 @@ func main() {
 	}
 
 	client := dynamodb.NewFromConfig(cfg)
-	h := NewHandler(client, tableName)
+	attributeMarshalMap := attributevalue.MarshalMap
+	h := handler.NewHandler(client, attributeMarshalMap, tableName)
 
 	lambda.Start(h.HandleRequest)
 }

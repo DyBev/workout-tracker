@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -28,15 +27,33 @@ type DynamoBatchWriter interface {
 	BatchWriteItem(ctx context.Context, params *dynamodb.BatchWriteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.BatchWriteItemOutput, error)
 }
 
+type DynamoAttributeMarshalMap = func (in any) (map[string]types.AttributeValue, error)
+
 // Handler holds the dependencies injected at startup.
 type Handler struct {
 	db        DynamoBatchWriter
 	tableName string
+	attributeMarshalMap DynamoAttributeMarshalMap
+}
+
+func min(a int, b int) int {
+	if (a > b) {
+		return b
+	}
+	return a
 }
 
 // NewHandler creates a Handler with the given DynamoDB client and table name.
-func NewHandler(db DynamoBatchWriter, tableName string) *Handler {
-	return &Handler{db: db, tableName: tableName}
+func NewHandler(
+	db DynamoBatchWriter,
+	attributeMarshalMap DynamoAttributeMarshalMap,
+	tableName string,
+) *Handler {
+	return &Handler{
+		db: db,
+		attributeMarshalMap: attributeMarshalMap,
+		tableName: tableName,
+	}
 }
 
 // HandleRequest processes the API Gateway proxy request.
@@ -49,21 +66,25 @@ func (h *Handler) HandleRequest(
 		return response(http.StatusInternalServerError, errorBody("table name not configured")), nil
 	}
 
-	var userID string
-	if req.RequestContext.Authorizer != nil {
-		jwt, ok := req.RequestContext.Authorizer["jwt"]
-		if !ok {
-			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
-		}
-		claims, ok := jwt.(map[string]any)["claims"]
-		if !ok {
-			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
-		}
-		userID, ok = claims.(map[string]any)["sub"].(string)
-		if !ok {
-			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
-		}
-	} else {
+	if req.RequestContext.Authorizer == nil {
+		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+	}
+
+	jwt, ok := req.RequestContext.Authorizer["jwt"]
+	if !ok {
+		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+	}
+
+	claims, ok := jwt.(map[string]any)["claims"]
+	if !ok {
+		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+	}
+
+	userID, ok := claims.(map[string]any)["sub"].(string)
+	if !ok {
+		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
+	}
+	if userID == "" {
 		return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 	}
 
@@ -74,9 +95,10 @@ func (h *Handler) HandleRequest(
 
 	failed, err := h.saveExercises(ctx, exercises)
 	if err != nil {
-		return response(http.StatusInternalServerError, errorBody("failed to save exercises")), err
+		return response(http.StatusInternalServerError, errorBody("failed to save exercises")), nil
 	}
 
+	successes := 0
 	results := make([]SaveResult, len(exercises))
 	for i, ex := range exercises {
 		if failed[ex.SavedExerciseID] {
@@ -86,11 +108,19 @@ func (h *Handler) HandleRequest(
 				Error:           "failed to save exercise",
 			}
 		} else {
+			successes++;
 			results[i] = SaveResult{
 				SavedExerciseID: ex.SavedExerciseID,
 				Status:          "saved",
 			}
 		}
+	}
+
+	if successes == 0 {
+	return response(http.StatusInternalServerError, map[string]any{
+		"message": "failed to save batch",
+		"results": results,
+	}), nil
 	}
 
 	return response(http.StatusCreated, map[string]any{
@@ -110,10 +140,7 @@ func (h *Handler) saveExercises(ctx context.Context, exercises []SavedExercise) 
 
 	var allUnprocessed []types.WriteRequest
 	for i := 0; i < len(requests); i += maxBatchSize {
-		end := i + maxBatchSize
-		if end > len(requests) {
-			end = len(requests)
-		}
+		end := min(i + maxBatchSize, len(requests))
 		chunk := requests[i:end]
 
 		unprocessed, err := h.batchWriteWithRetry(ctx, chunk)
@@ -141,7 +168,7 @@ func (h *Handler) buildWriteRequests(exercises []SavedExercise) ([]types.WriteRe
 	idByItem := make(map[string]string, len(exercises))
 
 	for i := range exercises {
-		item, err := attributevalue.MarshalMap(&exercises[i])
+		item, err := h.attributeMarshalMap(&exercises[i])
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal exercise %d: %w", i, err)
 		}
