@@ -1,8 +1,7 @@
-package main
+package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -13,81 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// mockDynamo implements DynamoUpdater for testing.
-type mockDynamo struct {
-	updateFunc func(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
-	calls      int
-	lastInput  *dynamodb.UpdateItemInput
-}
-
-func (m *mockDynamo) UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
-	m.calls++
-	m.lastInput = params
-	if m.updateFunc != nil {
-		return m.updateFunc(ctx, params, optFns...)
-	}
-	return &dynamodb.UpdateItemOutput{}, nil
-}
-
-func makeAuthedRequest(userID string, body string) events.APIGatewayProxyRequest {
-	return events.APIGatewayProxyRequest{
-		Body: body,
-		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]interface{}{
-				"jwt": map[string]interface{}{
-					"claims": map[string]interface{}{
-						"sub": userID,
-					},
-				},
-			},
-		},
-	}
-}
-
-func makeUnauthedRequest(body string) events.APIGatewayProxyRequest {
-	return events.APIGatewayProxyRequest{
-		Body: body,
-	}
-}
-
-func parseResponseBody(t *testing.T, body string) map[string]any {
-	t.Helper()
-	var m map[string]any
-	if err := json.Unmarshal([]byte(body), &m); err != nil {
-		t.Fatalf("failed to parse response body: %v", err)
-	}
-	return m
-}
-
-func fixedTime() time.Time {
-	return time.Date(2026, 3, 20, 12, 0, 0, 0, time.UTC)
-}
-
-// ── Tests: Auth ──────────────────────────────────────────────────────────────
-
-func TestRejectsUnauthenticated(t *testing.T) {
-	mock := &mockDynamo{}
-	h := NewHandler(mock, "TestTable")
-
-	resp, err := h.HandleRequest(context.Background(), makeUnauthedRequest(`{"savedExerciseId":"abc","archive":true}`))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
-	}
-	body := parseResponseBody(t, resp.Body)
-	if body["error"] != "not authorised" {
-		t.Errorf("expected error 'not authorised', got %q", body["error"])
-	}
-	if mock.calls > 0 {
-		t.Error("DynamoDB should not have been called for unauthenticated request")
-	}
-}
-
 // ── Tests: Request body validation ──────────────────────────────────────────
 
-func TestRejectsEmptyBody(t *testing.T) {
+func TestUnhappyEmptyBody(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
@@ -104,7 +31,7 @@ func TestRejectsEmptyBody(t *testing.T) {
 	}
 }
 
-func TestRejectsMissingSavedExerciseId(t *testing.T) {
+func TestUnhappyMissingSavedExerciseId(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
@@ -214,7 +141,6 @@ func TestRestoreExercise(t *testing.T) {
 }
 
 // ── Tests: Key correctness ──────────────────────────────────────────────────
-
 func TestUsesCorrectKey(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
@@ -236,6 +162,21 @@ func TestUsesCorrectKey(t *testing.T) {
 	}
 	if skVal.Value != "EXERCISE#abc123" {
 		t.Errorf("expected sk 'EXERCISE#abc123', got %q", skVal.Value)
+	}
+}
+
+func TestUnhappyMalformedBody(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "TestTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-xyz", `{"savedExerciseId":102890437,"archive":true}`))
+
+	if err != nil {
+		t.Errorf("unexpected error: %q", err.Error())
+	}
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status code: %q, got: %q", http.StatusBadRequest, resp.StatusCode)
 	}
 }
 
@@ -283,7 +224,6 @@ func stringPtr(s string) *string {
 }
 
 // ── Tests: DynamoDB error ─────────────────────────────────────────────────────
-
 func TestDynamoDBUpdateError(t *testing.T) {
 	mock := &mockDynamo{
 		updateFunc: func(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
@@ -306,7 +246,6 @@ func TestDynamoDBUpdateError(t *testing.T) {
 }
 
 // ── Tests: Response format ──────────────────────────────────────────────────
-
 func TestResponseHasJSONContentType(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
@@ -324,5 +263,124 @@ func TestErrorResponseHasJSONContentType(t *testing.T) {
 	resp, _ := h.HandleRequest(context.Background(), makeUnauthedRequest(""))
 	if resp.Headers["Content-Type"] != "application/json" {
 		t.Errorf("expected Content-Type 'application/json', got %q", resp.Headers["Content-Type"])
+	}
+}
+
+// TEST: unhappy path unauthorized user
+func TestUnhappyUnauthenticated(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		nil,
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+
+}
+
+func TestUnhappyUnauthenticatedMissingJWT(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestUnhappyUnauthenticatedMissingClaims(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{ },
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestUnhappyUnauthenticatedMissingSub(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{ },
+				},
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+func TestUnhappyUnauthenticatedMalformedSub(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "testTable")
+	resp, err := h.HandleRequest(context.Background(), makeRequestWithContext(
+		&events.APIGatewayProxyRequestContext{
+			Authorizer: map[string]any{
+				"jwt": map[string]any{
+					"claims": map[string]any{
+						"sub": "",
+					},
+				},
+			},
+		},
+	))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, resp.StatusCode)
+	}
+}
+
+// test unhappy missing table name
+func TestUnhappyMissingTableName(t *testing.T) {
+	mock := &mockDynamo{}
+	h := NewHandler(mock, "")
+	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("", ""))
+	if err != nil {
+		t.Errorf("unexpected error: %q", err.Error())
+	}
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected status: %q, got status: %q", http.StatusInternalServerError, resp.StatusCode)
 	}
 }

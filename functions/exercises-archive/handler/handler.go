@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -53,7 +53,7 @@ func (h *Handler) HandleRequest(
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
 		userID, ok = claims.(map[string]any)["sub"].(string)
-		if !ok {
+		if !ok || userID == "" {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
 	} else {

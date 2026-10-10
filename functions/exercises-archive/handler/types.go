@@ -1,4 +1,4 @@
-package main
+package handler
 
 // SavedExercise represents a saved exercise item in DynamoDB.
 type SavedExercise struct {
