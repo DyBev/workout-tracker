@@ -65,7 +65,7 @@ func (h *Handler) HandleRequest(
 
 	workouts, nextSK, err := h.queryWorkouts(ctx, userID, skCursor)
 	if err != nil {
-		return response(http.StatusInternalServerError, errorBody("failed to read workouts")), err
+		return response(http.StatusInternalServerError, errorBody("failed to read workouts")), nil
 	}
 
 	return response(http.StatusOK, map[string]any{

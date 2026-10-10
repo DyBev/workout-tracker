@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,73 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// mockDynamo implements DynamoQuerier for testing.
-type mockDynamo struct {
-	queryFunc func(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
-	calls     int
-	lastInput *dynamodb.QueryInput
-}
-
-func (m *mockDynamo) Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
-	m.calls++
-	m.lastInput = params
-	if m.queryFunc != nil {
-		return m.queryFunc(ctx, params, optFns...)
-	}
-	return &dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{}}, nil
-}
-
-// makeAuthedRequest builds an APIGatewayProxyRequest with a fake Cognito JWT
-// authorizer context for the given user ID.
-func makeAuthedRequest(userID string, queryParams map[string]string) events.APIGatewayProxyRequest {
-	return events.APIGatewayProxyRequest{
-		QueryStringParameters: queryParams,
-		RequestContext: events.APIGatewayProxyRequestContext{
-			Authorizer: map[string]any{
-				"jwt": map[string]any{
-					"claims": map[string]any{
-						"sub": userID,
-					},
-				},
-			},
-		},
-	}
-}
-
-func makeUnauthedRequest() events.APIGatewayProxyRequest {
-	return events.APIGatewayProxyRequest{}
-}
-
-func parseResponseBody(t *testing.T, body string) map[string]any {
-	t.Helper()
-	var m map[string]any
-	if err := json.Unmarshal([]byte(body), &m); err != nil {
-		t.Fatalf("failed to parse response body: %v", err)
-	}
-	return m
-}
-
-// buildWorkoutItems constructs n DynamoDB attribute maps that look like Workout items.
-func buildWorkoutItems(userID string, n int) []map[string]types.AttributeValue {
-	items := make([]map[string]types.AttributeValue, n)
-	for i := range n {
-		sk := fmt.Sprintf("WORKOUT#2026-03-%02dT10:00:00.000Z#wkt-%03d", i+1, i)
-		items[i] = map[string]types.AttributeValue{
-			"userId":    &types.AttributeValueMemberS{Value: userID},
-			"sk":        &types.AttributeValueMemberS{Value: sk},
-			"workoutId": &types.AttributeValueMemberS{Value: fmt.Sprintf("wkt-%03d", i)},
-			"startedAt": &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", i+1)},
-			"createdAt": &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", i+1)},
-			"updatedAt": &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", i+1)},
-			"notes":     &types.AttributeValueMemberS{Value: ""},
-		}
-	}
-	return items
-}
-
-// TEST: Auth
-
-func TestRejectsUnauthenticated(t *testing.T) {
+// test: Auth
+func TestUnhappyUnauthenticated(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
@@ -99,7 +33,7 @@ func TestRejectsUnauthenticated(t *testing.T) {
 	}
 }
 
-func TestRejectsMissingClaimsSub(t *testing.T) {
+func TestUnhappyMissingClaimsSub(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
@@ -123,7 +57,7 @@ func TestRejectsMissingClaimsSub(t *testing.T) {
 }
 
 
-func TestRejectsMissingJWTClaims(t *testing.T) {
+func TestUnhappyMissingJWTClaims(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
@@ -144,7 +78,7 @@ func TestRejectsMissingJWTClaims(t *testing.T) {
 	}
 }
 
-func TestRejectsMissingJWTKey(t *testing.T) {
+func TestUnhappyMissingJWTKey(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "TestTable")
 
@@ -164,8 +98,7 @@ func TestRejectsMissingJWTKey(t *testing.T) {
 }
 
 // TEST: Missing table name
-
-func TestRejectsMissingTableName(t *testing.T) {
+func TestUnhappyMissingTableName(t *testing.T) {
 	mock := &mockDynamo{}
 	h := NewHandler(mock, "")
 
@@ -421,12 +354,47 @@ func TestDynamoDBQueryError(t *testing.T) {
 	h := NewHandler(mock, "TestTable")
 
 	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", nil))
-	if err == nil {
-		t.Fatal("expected error to be returned from HandleRequest")
+	if err != nil {
+		t.Errorf("unexpected error returned from HandleRequest: %q", err.Error())
 	}
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
 	}
+	body := parseResponseBody(t, resp.Body)
+	if body["error"] != "failed to read workouts" {
+		t.Errorf("expected 'failed to read workouts', got %q", body["error"])
+	}
+}
+
+func TestDynamoDBContentError(t *testing.T) {
+	mock := &mockDynamo{
+		queryFunc: func(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+			return &dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{
+				{
+					"PK": &types.AttributeValueMemberN{ Value: "10" },
+					"userId":          &types.AttributeValueMemberN{Value: "10"},
+					"sk":              &types.AttributeValueMemberS{Value: "EXERCISE#"},
+					"savedExerciseId": &types.AttributeValueMemberS{Value: ""},
+					"name":            &types.AttributeValueMemberS{Value: "Exercise 10"},
+					"note":            &types.AttributeValueMemberS{Value: ""},
+					"tags":            &types.AttributeValueMemberN{Value: "10"},
+					"createdAt":       &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", 0+1)},
+					"updatedAt":       &types.AttributeValueMemberS{Value: fmt.Sprintf("2026-03-%02dT10:00:00.000Z", 0+1)},
+				},
+			}}, nil
+		},
+	}
+	h := NewHandler(mock, "TestTable")
+
+	resp, err := h.HandleRequest(context.Background(), makeAuthedRequest("user-123", nil))
+	if err != nil {
+		t.Errorf("unexpected error returned from HandleRequest: %q", err.Error())
+	}
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, resp.StatusCode)
+	}
+
 	body := parseResponseBody(t, resp.Body)
 	if body["error"] != "failed to read workouts" {
 		t.Errorf("expected 'failed to read workouts', got %q", body["error"])
