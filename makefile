@@ -26,7 +26,7 @@ $(shell find $(CMD_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;):
 	@FUNCTION=$@ \
 	&& CGO_ENABLED=0 go test ./functions/$$FUNCTION/handler -coverprofile=coverage.out \
 	&& COVERAGE=$$(go tool cover -func=coverage.out | grep "total" | awk '{print $$3}' | tr -d '%') \
-	&& if awk -v coverage=$$COVERAGE 'BEGIN {exit !(coverage < 99)}'; then \
+	&& if [ "$${COVERAGE%.*}" -lt 99 ]; then \
 		echo "Coverage is $${COVERAGE}% — expected above 99%"; \
 		exit 1; \
 	fi \
