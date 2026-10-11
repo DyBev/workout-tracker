@@ -4,6 +4,7 @@ resource "aws_resourcegroups_group" "resource_group" {
   resource_query {
     query = <<JSON
 {
+  "Type": "TAG_FILTERS_1_0",
   "TagFilters": [
     {
       "Key": "Project",
