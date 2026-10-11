@@ -30,8 +30,6 @@ jobs:
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
-        with:
-          tofu_version: 1.8.2
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -45,7 +43,14 @@ jobs:
 
       - name: OpenTofu init
         working-directory: ${{ env.TOFU_DIR }}
-        run: tofu init
+        env:
+          PULL_NUMBER: ${{ steps.preview.outputs.name }}
+        run: |
+          cat > preview.backend.hcl << EOF
+          key = "workout-tracker/${PULL_NUMBER}/terraform.tfstate"
+          EOF
+
+          tofu init -backend-config=preview.backend.hcl
 
       - name: OpenTofu apply preview infra
         working-directory: ${{ env.TOFU_DIR }}
