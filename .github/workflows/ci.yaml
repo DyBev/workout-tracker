@@ -68,16 +68,14 @@ jobs:
           echo "cloudfront_domain=$(tofu output -raw cloudfront_domain_name)" >> "$GITHUB_OUTPUT"
           echo "bucket_name=$(tofu output -raw bucket_name)" >> "$GITHUB_OUTPUT"
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
 
-      - name: Install deps
-        run: npm ci
+      - name: Install dependencies
+        run: bun install
 
-      - name: Build app
-        run: npm run build --workspace packages/app
+      - name: Build web app
+        run: bun run build:web
 
       - name: Sync app to preview S3
         run: |
