@@ -1,0 +1,156 @@
+name: PR Preview Environment
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, closed]
+    paths:
+      - 'functions/**'
+      - 'packages/app/**'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_NAME: workout-tracker
+  ENVIRONMENT: dev
+  TOFU_DIR: infra
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.8.2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set preview identifier
+        id: preview
+        run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: OpenTofu init
+        working-directory: ${{ env.TOFU_DIR }}
+        run: tofu init
+
+      - name: OpenTofu apply preview infra
+        working-directory: ${{ env.TOFU_DIR }}
+        run: |
+          tofu apply -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="project_name=${PROJECT_NAME}" \
+            -var="environment=${ENVIRONMENT}" \
+            -var="branch_name=${{ steps.preview.outputs.name }}"
+
+      - name: Capture infra outputs
+        id: outputs
+        working-directory: ${{ env.TOFU_DIR }}
+        run: |
+          echo "cloudfront_domain=$(tofu output -raw cloudfront_domain_name)" >> "$GITHUB_OUTPUT"
+          echo "bucket_name=$(tofu output -raw bucket_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build app
+        run: npm run build --workspace packages/app
+
+      - name: Sync app to preview S3
+        run: |
+          aws s3 sync packages/app/dist s3://${{ steps.outputs.outputs.bucket_name }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DIST_ID=$(tofu -chdir=${{ env.TOFU_DIR }} output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://${{ steps.outputs.outputs.cloudfront_domain }}`;
+            const body = `✅ Preview updated\n\nPreview URL: ${url}`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+  # test:
+  #   if: github.event.action != 'closed'
+  #   needs: [ "deploy" ]
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #
+  #     - name: Install deps
+  #       run: npm ci
+  #
+  #     - name: Install Playwright
+  #       run: npx playwright install --with-deps
+  #
+  #     - name: Run smoke tests
+  #       env:
+  #         BASE_URL: https://${{ steps.outputs.outputs.cloudfront_domain }}
+  #       run: |
+  #         echo "Testing ${BASE_URL}"
+  #         npx playwright test --grep @smoke
+
+  destroy:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.8.2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: OpenTofu init
+        working-directory: ${{ env.TOFU_DIR }}
+        run: tofu init
+
+      - name: Destroy preview infra
+        working-directory: ${{ env.TOFU_DIR }}
+        run: |
+          tofu destroy -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="project_name=${PROJECT_NAME}" \
+            -var="environment=${ENVIRONMENT}" \
+            -var="branch_name=pr-${{ github.event.pull_request.number }}"
