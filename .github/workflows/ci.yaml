@@ -86,18 +86,44 @@ jobs:
           DIST_ID=$(tofu -chdir=${{ env.TOFU_DIR }} output -raw cloudfront_distribution_id)
           aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
 
-      - name: Comment preview URL on PR
+      - name: Add preview URL to PR body
         uses: actions/github-script@v7
         with:
           script: |
             const url = `https://${{ steps.outputs.outputs.cloudfront_domain }}`;
-            const body = `✅ Preview updated\n\nPreview URL: ${url}`;
-            github.rest.issues.createComment({
+            const marker = '<!-- preview-url-added -->';
+
+            const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
+              pull_number: context.issue.number,
             });
+
+            const currentBody = pr.body || '';
+
+            if (currentBody.includes(marker)) {
+              core.info('Preview URL already exists in the PR body. Skipping.');
+              return;
+            }
+
+            const updatedBody = `${currentBody.trimEnd()}
+
+            ## Preview Environment
+
+            ✅ Preview updated
+
+            Preview URL: ${url}
+
+            ${marker}`;
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              body: updatedBody,
+            });
+
+            core.info('Preview URL added to PR body.');
 
   # test:
   #   if: github.event.action != 'closed'
