@@ -110,8 +110,6 @@ jobs:
 
             ## Preview Environment
 
-            ✅ Preview updated
-
             Preview URL: ${url}
 
             ${marker}`;
