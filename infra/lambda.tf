@@ -1,11 +1,15 @@
 variable "lambdas" {
   type = map(object({
     zip_path = string
+    api_method = string
+    api_path = string
   }))
 
   default = {
     "read-workout" = {
-      zip_path = "../build/read-workout.zip"
+      zip_path = "../build/read-workout.zip",
+      api_path = "/read",
+      api_method = "GET",
     }
   }
 }
