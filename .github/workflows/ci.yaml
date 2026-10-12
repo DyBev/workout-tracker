@@ -28,6 +28,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        id: bun-setup
+        background: true
+        uses: oven-sh/setup-bun@v1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        background: true
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Wait for Setup
+        wait-all:
+
+      - name: Install Dependencies
+        background: true
+        run: go mod tidy
+
+      - name: Install dependencies and build
+        id: bun-install
+        wait: bun-setup
+        background: true
+        run: bun install
+
+      - name: Wait for install
+        wait-all:
+
+      - name: Build Frontend
+        background: true
+        run: bun run build:web
+
+      - name: Build Lambda read-workout
+        id: build-read-workout
+        background: true
+        run: make read-workout
+
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
 
@@ -40,6 +78,9 @@ jobs:
       - name: Set preview identifier
         id: preview
         run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for backgrounds
+        wait-all:
 
       - name: OpenTofu init
         working-directory: ${{ env.TOFU_DIR }}
@@ -67,15 +108,6 @@ jobs:
         run: |
           echo "cloudfront_domain=$(tofu output -raw cloudfront_domain_name)" >> "$GITHUB_OUTPUT"
           echo "bucket_name=$(tofu output -raw bucket_name)" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build web app
-        run: bun run build:web
 
       - name: Sync app to preview S3
         run: |
