@@ -63,7 +63,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_lambda_function" "functions" {
   for_each = var.lambdas
 
-  function_name = "${var.project_name}-${var.environment}-preview-${local.branch_slug}-${each.key}"
+  function_name = "${var.project_name}-preview-${var.environment}-${local.branch_slug}-${each.key}"
   role          = aws_iam_role.lambda.arn
   handler       = "bootstrap"
   runtime       = "provided.al2023"
