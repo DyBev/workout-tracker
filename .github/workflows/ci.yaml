@@ -50,7 +50,6 @@ jobs:
 
       - name: Install dependencies and build
         id: bun-install
-        wait: bun-setup
         background: true
         run: bun install
 
