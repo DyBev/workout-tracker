@@ -1,15 +1,11 @@
 variable "lambdas" {
   type = map(object({
     zip_path = string
-    environment = map(string)
   }))
 
   default = {
     "read-workout" = {
       zip_path = "../build/read-workout.zip"
-      environment = {
-        TABLE_NAME = "${local.table_name}"
-      }
     }
   }
 }
@@ -74,6 +70,12 @@ resource "aws_lambda_function" "functions" {
 
   filename         = each.value.zip_path
   source_code_hash = filebase64sha256(each.value.zip_path)
+
+  environment {
+    variables = merge({
+      TABLE_NAME = local.table_name
+    })
+  }
 
   tags = local.common_tags
 }
