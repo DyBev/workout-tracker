@@ -8,7 +8,7 @@ variable "lambdas" {
     "read-workout" = {
       zip_path = "../build/read-workout.zip"
       environment = {
-        TABLE_NAME = "${vars.tableName}"
+        TABLE_NAME = "${local.table_name}"
       }
     }
   }
