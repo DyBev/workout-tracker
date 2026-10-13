@@ -60,3 +60,8 @@ locals {
     var.tags
   )
 }
+
+module "cognito" {
+  source = "./modules/cognito"
+  name   = "workout-tracker"
+}
