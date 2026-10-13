@@ -49,3 +49,4 @@ functions/tmp/
 samconfig.toml
 build/*
 /infra/.terraform
+/.env
