@@ -75,6 +75,9 @@ resource "aws_lambda_function" "functions" {
   filename         = each.value.zip_path
   source_code_hash = filebase64sha256(each.value.zip_path)
 
+  architectures = [ "arm64" ]
+  memory_size = 1024
+
   environment {
     variables = merge({
       TABLE_NAME = local.table_name
