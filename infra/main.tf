@@ -63,5 +63,4 @@ locals {
 
 module "cognito" {
   source = "./modules/cognito"
-  name   = "workout-tracker"
 }

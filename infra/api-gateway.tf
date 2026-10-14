@@ -5,10 +5,6 @@ resource "aws_apigatewayv2_api" "api" {
   tags = local.common_tags
 
   cors_configuration {
-    allow_origins = [
-      "https://dev.example.com"
-    ]
-
     allow_methods = [
       "GET",
       "POST",
@@ -42,12 +38,31 @@ resource "aws_apigatewayv2_route" "routes" {
   api_id    = aws_apigatewayv2_api.api.id
   route_key = "${var.lambdas[each.key].api_method} ${var.lambdas[each.key].api_path}"
   target    = "integrations/${each.value.id}"
+
+  authorization_type = "JWT"
+  authorizer_id = aws_apigatewayv2_authorizer.authoriser.id
 }
 
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.api.id
-  name        = "$default"
+  name        = "api"
   auto_deploy = true
+}
+
+resource "aws_apigatewayv2_authorizer" "authoriser" {
+  api_id = aws_apigatewayv2_api.api.id
+  authorizer_type = "JWT"
+  name = "jwt-auth"
+  identity_sources = [
+    "$request.header.Authorization"
+  ]
+
+  jwt_configuration {
+    issuer = "https://${module.cognito.user_pool_endpoint}"
+    audience = [
+       module.cognito.workout_tracker_client_id
+    ]
+  }
 }
 
 resource "aws_lambda_permission" "api_gateway" {
@@ -59,3 +74,4 @@ resource "aws_lambda_permission" "api_gateway" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }
+
