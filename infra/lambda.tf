@@ -11,6 +11,12 @@ variable "lambdas" {
       api_path = "/read",
       api_method = "GET",
     }
+
+    "save-workout" = {
+      zip_path = "../build/save-workout.zip",
+      api_path = "/save",
+      api_method = "POST",
+    }
   }
 }
 
