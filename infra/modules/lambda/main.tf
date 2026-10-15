@@ -1,25 +1,3 @@
-variable "lambdas" {
-  type = map(object({
-    zip_path = string
-    api_method = string
-    api_path = string
-  }))
-
-  default = {
-    "read-workout" = {
-      zip_path = "../build/read-workout.zip",
-      api_path = "/read",
-      api_method = "GET",
-    }
-
-    "save-workout" = {
-      zip_path = "../build/save-workout.zip",
-      api_path = "/save",
-      api_method = "POST",
-    }
-  }
-}
-
 data "aws_iam_policy_document" "lambda_assume_role" {
   statement {
     effect  = "Allow"
@@ -33,7 +11,7 @@ data "aws_iam_policy_document" "lambda_assume_role" {
 }
 
 resource "aws_iam_role" "lambda" {
-  name               = "${var.project_name}-preview-${var.environment}-${local.branch_slug}"
+  name               = "${var.project_name}-preview-${var.environment}-${var.branch_slug}"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
 }
 
@@ -58,8 +36,8 @@ data "aws_iam_policy_document" "lambda_dynamodb" {
     ]
 
     resources = [
-      aws_dynamodb_table.workouts.arn,
-      "${aws_dynamodb_table.workouts.arn}/index/*"
+      var.aws_dynamodb_table_arn,
+      "${var.aws_dynamodb_table_arn}/index/*"
     ]
   }
 }
@@ -73,7 +51,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_lambda_function" "functions" {
   for_each = var.lambdas
 
-  function_name = "${var.project_name}-preview-${var.environment}-${local.branch_slug}-${each.key}"
+  function_name = "${var.project_name}-preview-${var.environment}-${var.branch_slug}-${each.key}"
   role          = aws_iam_role.lambda.arn
   handler       = "bootstrap"
   runtime       = "provided.al2023"
@@ -86,10 +64,10 @@ resource "aws_lambda_function" "functions" {
 
   environment {
     variables = merge({
-      TABLE_NAME = local.table_name
+      TABLE_NAME = var.table_name
     })
   }
 
-  tags = local.common_tags
+  tags = var.tags
 }
 

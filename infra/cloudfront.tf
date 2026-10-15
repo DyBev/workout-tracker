@@ -18,7 +18,7 @@ resource "aws_cloudfront_distribution" "web" {
   }
 
   origin {
-    domain_name = trimprefix(aws_apigatewayv2_api.api.api_endpoint, "https://")
+    domain_name = trimprefix(module.gateway.api_endpoint, "https://")
     origin_id   = "api-gateway"
 
     origin_path = ""
