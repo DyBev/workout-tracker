@@ -87,3 +87,10 @@ module "gateway" {
   cognito_module_user_pool_endpoint = module.cognito.user_pool_endpoint
   cognito_module_workout_tracker_client_id = module.cognito.workout_tracker_client_id
 }
+
+module "s3" {
+  source = "./modules/s3"
+  bucket_name = local.bucket_name
+  tags = local.common_tags
+  aws_cloudfront_distribution_arn = aws_cloudfront_distribution.web.arn
+}

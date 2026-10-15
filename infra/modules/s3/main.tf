@@ -1,7 +1,7 @@
 resource "aws_s3_bucket" "web" {
-  bucket        = local.bucket_name
+  bucket        = var.bucket_name
   force_destroy = true
-  tags          = local.common_tags
+  tags          = var.tags
 }
 
 resource "aws_s3_bucket_public_access_block" "web" {
@@ -38,7 +38,7 @@ data "aws_iam_policy_document" "web_bucket_policy" {
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.web.arn]
+      values   = [var.aws_cloudfront_distribution_arn]
     }
   }
 }
