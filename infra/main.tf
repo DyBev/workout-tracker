@@ -64,3 +64,26 @@ locals {
 module "cognito" {
   source = "./modules/cognito"
 }
+
+module "lambda" {
+  source = "./modules/lambda"
+  tags = local.common_tags
+  table_name = local.table_name
+  environment = var.environment
+  project_name = var.project_name
+  branch_slug = local.branch_slug
+  aws_dynamodb_table_arn = aws_dynamodb_table.workouts.arn
+}
+
+module "gateway" {
+  source = "./modules/api-gateway"
+  aws_region = var.aws_region
+  branch_name = var.branch_name
+  environment = var.environment
+  project_name = var.project_name
+  tags = local.common_tags
+  lambda_functions = module.lambda.aws_lambdas
+  functions_list = module.lambda.lambdas
+  cognito_module_user_pool_endpoint = module.cognito.user_pool_endpoint
+  cognito_module_workout_tracker_client_id = module.cognito.workout_tracker_client_id
+}

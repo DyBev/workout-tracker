@@ -2,7 +2,7 @@ resource "aws_apigatewayv2_api" "api" {
   name          = "${var.project_name}-preview-${var.environment}-${var.branch_name}"
   protocol_type = "HTTP"
 
-  tags = local.common_tags
+  tags = var.tags
 
   cors_configuration {
     allow_methods = [
@@ -22,7 +22,7 @@ resource "aws_apigatewayv2_api" "api" {
 }
 
 resource "aws_apigatewayv2_integration" "backend" {
-  for_each = aws_lambda_function.functions
+  for_each = var.lambda_functions
 
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
@@ -36,7 +36,7 @@ resource "aws_apigatewayv2_route" "routes" {
   for_each = aws_apigatewayv2_integration.backend
 
   api_id    = aws_apigatewayv2_api.api.id
-  route_key = "${var.lambdas[each.key].api_method} ${var.lambdas[each.key].api_path}"
+  route_key = "${var.functions_list[each.key].api_method} ${var.functions_list[each.key].api_path}"
   target    = "integrations/${each.value.id}"
 
   authorization_type = "JWT"
@@ -58,15 +58,15 @@ resource "aws_apigatewayv2_authorizer" "authoriser" {
   ]
 
   jwt_configuration {
-    issuer = "https://${module.cognito.user_pool_endpoint}"
+    issuer = "https://${var.cognito_module_user_pool_endpoint}"
     audience = [
-       module.cognito.workout_tracker_client_id
+       var.cognito_module_workout_tracker_client_id
     ]
   }
 }
 
 resource "aws_lambda_permission" "api_gateway" {
-  for_each = aws_lambda_function.functions
+  for_each = var.lambda_functions
 
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
