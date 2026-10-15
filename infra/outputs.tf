@@ -1,6 +1,6 @@
 output "bucket_name" {
   description = "Dev branch S3 bucket name."
-  value       = aws_s3_bucket.web.bucket
+  value       = module.s3.bucket
 }
 
 output "cloudfront_domain_name" {

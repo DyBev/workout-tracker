@@ -12,8 +12,8 @@ resource "aws_cloudfront_distribution" "web" {
   default_root_object = "index.html"
 
   origin {
-    domain_name              = aws_s3_bucket.web.bucket_regional_domain_name
-    origin_id                = "s3-${aws_s3_bucket.web.id}"
+    domain_name              = module.s3.bucket_regional_domain_name
+    origin_id                = "s3-${module.s3.id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.web.id
   }
 
@@ -32,7 +32,7 @@ resource "aws_cloudfront_distribution" "web" {
   }
 
   default_cache_behavior {
-    target_origin_id       = "s3-${aws_s3_bucket.web.id}"
+    target_origin_id       = "s3-${module.s3.id}"
     viewer_protocol_policy = "redirect-to-https"
 
     allowed_methods = ["GET", "HEAD", "OPTIONS"]
