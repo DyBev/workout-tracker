@@ -69,7 +69,7 @@ locals {
 }
 
 module "resource_group" {
-  source = "./modules/resource-group"
+  source = "../modules/resource-group"
   name = local.table_name
   project_name = var.project_name
   environment = var.environment
@@ -77,17 +77,17 @@ module "resource_group" {
 }
 
 module "cognito" {
-  source = "./modules/cognito"
+  source = "../modules/cognito"
 }
 
 module "dynamo" {
-  source = "./modules/dynamodb"
+  source = "../modules/dynamodb"
   tags = local.common_tags
   table_name = local.table_name
 }
 
 module "lambda" {
-  source = "./modules/lambda"
+  source = "../modules/lambda"
   tags = local.common_tags
   table_name = local.table_name
   environment = var.environment
@@ -97,7 +97,7 @@ module "lambda" {
 }
 
 module "gateway" {
-  source = "./modules/api-gateway"
+  source = "../modules/api-gateway"
   aws_region = var.aws_region
   branch_name = var.branch_name
   environment = var.environment
@@ -110,7 +110,7 @@ module "gateway" {
 }
 
 module "cloudfront" {
-  source = "./modules/cloudfront"
+  source = "../modules/cloudfront"
   bucket_name = local.bucket_name
   branch_name = var.branch_name
   branch_slug = local.branch_slug
@@ -123,7 +123,7 @@ module "cloudfront" {
 }
 
 module "s3" {
-  source = "./modules/s3"
+  source = "../modules/s3"
   bucket_name = local.bucket_name
   tags = local.common_tags
   aws_cloudfront_distribution_arn = module.cloudfront.arn

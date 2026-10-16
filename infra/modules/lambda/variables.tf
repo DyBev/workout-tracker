@@ -7,13 +7,13 @@ variable "lambdas" {
 
   default = {
     "read-workout" = {
-      zip_path = "../build/read-workout.zip",
+      zip_path = "../../build/read-workout.zip",
       api_path = "/read",
       api_method = "GET",
     }
 
     "save-workout" = {
-      zip_path = "../build/save-workout.zip",
+      zip_path = "../../build/save-workout.zip",
       api_path = "/save",
       api_method = "POST",
     }
