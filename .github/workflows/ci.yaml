@@ -137,18 +137,22 @@ jobs:
 
             const currentBody = pr.body || '';
 
-            if (currentBody.includes(marker)) {
+            if (currentBody.includes(url)) {
               core.info('Preview URL already exists in the PR body. Skipping.');
               return;
             }
 
-            const updatedBody = `${currentBody.trimEnd()}
+            let updatedBody;
+            if (currentBody.includes(marker)) {
+              updatedBody = currentBody.replace(/Preview URL: .*$/i, `Preview URL: ${url}`)
+            } else {
+              updatedBody = `${currentBody.trimEnd()}
+                ## Preview Environment
 
-            ## Preview Environment
+                Preview URL: ${url}
 
-            Preview URL: ${url}
-
-            ${marker}`;
+                ${marker}`;
+            }
 
             await github.rest.pulls.update({
               owner: context.repo.owner,
