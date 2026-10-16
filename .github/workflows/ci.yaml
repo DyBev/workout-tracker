@@ -144,7 +144,7 @@ jobs:
 
             let updatedBody;
             if (currentBody.includes(marker)) {
-              updatedBody = currentBody.replace(/Preview URL: .*$/i, `Preview URL: ${url}`)
+              updatedBody = currentBody.replace(/Preview URL: .*/, `Preview URL: ${url}`)
             } else {
               updatedBody = `${currentBody.trimEnd()}
                 ## Preview Environment
