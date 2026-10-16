@@ -7,6 +7,13 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket       = "dybev.uk-projects"
+    region       = "eu-west-2"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
@@ -65,6 +72,12 @@ module "cognito" {
   source = "./modules/cognito"
 }
 
+module "dynamo" {
+  source = "./modules/dynamodb"
+  tags = local.common_tags
+  table_name = local.table_name
+}
+
 module "lambda" {
   source = "./modules/lambda"
   tags = local.common_tags
@@ -72,7 +85,7 @@ module "lambda" {
   environment = var.environment
   project_name = var.project_name
   branch_slug = local.branch_slug
-  aws_dynamodb_table_arn = aws_dynamodb_table.workouts.arn
+  aws_dynamodb_table_arn = module.dynamo.arn
 }
 
 module "gateway" {

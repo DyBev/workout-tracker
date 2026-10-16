@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "workouts" {
-  name         = local.table_name
+  name         = var.table_name
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key  = "userId"
@@ -31,5 +31,5 @@ resource "aws_dynamodb_table" "workouts" {
     enabled = false
   }
 
-  tags = local.common_tags
+  tags = var.tags
 }
