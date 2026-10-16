@@ -68,6 +68,14 @@ locals {
   )
 }
 
+module "resource_group" {
+  source = "./modules/resource-group"
+  name = local.table_name
+  project_name = var.project_name
+  environment = var.environment
+  branch_name = var.branch_name
+}
+
 module "cognito" {
   source = "./modules/cognito"
 }

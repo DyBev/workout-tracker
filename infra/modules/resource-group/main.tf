@@ -1,5 +1,5 @@
 resource "aws_resourcegroups_group" "resource_group" {
-  name = local.table_name
+  name = var.name
 
   resource_query {
     query = jsonencode({
