@@ -88,9 +88,22 @@ module "gateway" {
   cognito_module_workout_tracker_client_id = module.cognito.workout_tracker_client_id
 }
 
+module "cloudfront" {
+  source = "./modules/cloudfront"
+  bucket_name = local.bucket_name
+  branch_name = var.branch_name
+  branch_slug = local.branch_slug
+  tags = local.common_tags
+  environment = var.environment
+  project_name = var.project_name
+  gateway_api_endpoint = module.gateway.api_endpoint
+  s3_id = module.s3.id
+  s3_bucket_regional_domain_name = module.s3.bucket_regional_domain_name
+}
+
 module "s3" {
   source = "./modules/s3"
   bucket_name = local.bucket_name
   tags = local.common_tags
-  aws_cloudfront_distribution_arn = aws_cloudfront_distribution.web.arn
+  aws_cloudfront_distribution_arn = module.cloudfront.arn
 }

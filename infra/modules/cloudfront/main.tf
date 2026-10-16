@@ -1,6 +1,6 @@
 resource "aws_cloudfront_origin_access_control" "web" {
-  name                              = "${local.branch_slug}-oac"
-  description                       = "OAC for ${local.bucket_name}"
+  name                              = "${var.branch_slug}-oac"
+  description                       = "OAC for ${var.bucket_name}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -12,13 +12,13 @@ resource "aws_cloudfront_distribution" "web" {
   default_root_object = "index.html"
 
   origin {
-    domain_name              = module.s3.bucket_regional_domain_name
-    origin_id                = "s3-${module.s3.id}"
+    domain_name              = var.s3_bucket_regional_domain_name
+    origin_id                = "s3-${var.s3_id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.web.id
   }
 
   origin {
-    domain_name = trimprefix(module.gateway.api_endpoint, "https://")
+    domain_name = trimprefix(var.gateway_api_endpoint, "https://")
     origin_id   = "api-gateway"
 
     origin_path = ""
@@ -32,7 +32,7 @@ resource "aws_cloudfront_distribution" "web" {
   }
 
   default_cache_behavior {
-    target_origin_id       = "s3-${module.s3.id}"
+    target_origin_id       = "s3-${var.s3_id}"
     viewer_protocol_policy = "redirect-to-https"
 
     allowed_methods = ["GET", "HEAD", "OPTIONS"]
@@ -78,5 +78,5 @@ resource "aws_cloudfront_distribution" "web" {
     cloudfront_default_certificate = true
   }
 
-  tags = local.common_tags
+  tags = var.tags
 }
