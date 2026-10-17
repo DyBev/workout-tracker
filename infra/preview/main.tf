@@ -55,7 +55,7 @@ locals {
   branch_slug = replace(lower(var.branch_name), "[^a-z0-9-]", "-")
 
   bucket_name = "${var.project_name}-preview-${var.environment}-${local.branch_slug}"
-  table_name = "${var.project_name}-preview-${var.environment}-${local.branch_slug}"
+  table_name = local.bucket_name
 
   common_tags = merge(
     {
