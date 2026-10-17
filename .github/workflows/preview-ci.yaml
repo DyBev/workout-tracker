@@ -1,0 +1,217 @@
+name: PR Preview Environment
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_NAME: workout-tracker
+  ENVIRONMENT: dev
+  TOFU_DIR: infra/preview
+
+jobs:
+  deploy:
+    environment: pr-preview
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        id: bun-setup
+        background: true
+        uses: oven-sh/setup-bun@v1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        background: true
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Wait for Setup
+        wait-all:
+
+      - name: Install Dependencies
+        background: true
+        run: go mod tidy
+
+      - name: Install dependencies and build
+        id: bun-install
+        background: true
+        run: bun install
+
+      - name: Setup OpenTofu
+        background: true
+        uses: opentofu/setup-opentofu@v1
+
+      - name: Configure AWS credentials (OIDC)
+        background: true
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set preview identifier
+        background: true
+        id: preview
+        run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for install
+        wait-all:
+
+      - name: Build Frontend
+        background: true
+        run: bun run build:web
+
+      - name: Build Lambda read-workout
+        id: build-read-workout
+        background: true
+        run: make read-workout
+
+      - name: Build Lambda save-workout
+        id: build-save-workout
+        background: true
+        run: make save-workout
+
+      - name: Wait for backgrounds
+        wait-all:
+
+      - name: OpenTofu init
+        working-directory: ${{ env.TOFU_DIR }}
+        env:
+          PULL_NUMBER: ${{ steps.preview.outputs.name }}
+        run: |
+          cat > preview.backend.hcl << EOF
+          key = "workout-tracker/${PULL_NUMBER}/terraform.tfstate"
+          EOF
+
+          tofu init -backend-config=preview.backend.hcl
+
+      - name: OpenTofu apply preview infra
+        working-directory: ${{ env.TOFU_DIR }}
+        run: |
+          tofu apply -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="project_name=${PROJECT_NAME}" \
+            -var="environment=${ENVIRONMENT}" \
+            -var="branch_name=${{ steps.preview.outputs.name }}"
+
+      - name: Capture infra outputs
+        id: outputs
+        working-directory: ${{ env.TOFU_DIR }}
+        run: |
+          echo "cloudfront_domain=$(tofu output -raw cloudfront_domain_name)" >> "$GITHUB_OUTPUT"
+          echo "bucket_name=$(tofu output -raw bucket_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Sync app to preview S3
+        run: |
+          aws s3 sync packages/app/dist s3://${{ steps.outputs.outputs.bucket_name }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DIST_ID=$(tofu -chdir=${{ env.TOFU_DIR }} output -raw cloudfront_distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
+
+      - name: Add preview URL to PR body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://${{ steps.outputs.outputs.cloudfront_domain }}`;
+            const marker = '<!-- preview-url-added -->';
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            const currentBody = pr.body || '';
+
+            if (currentBody.includes(url)) {
+              core.info('Preview URL already exists in the PR body. Skipping.');
+              return;
+            }
+
+            let updatedBody;
+            if (currentBody.includes(marker)) {
+              updatedBody = currentBody.replace(/Preview URL: .*/, `Preview URL: ${url}`)
+            } else {
+              updatedBody = `${currentBody.trimEnd()}
+                ## Preview Environment
+
+                Preview URL: ${url}
+
+                ${marker}`;
+            }
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              body: updatedBody,
+            });
+
+            core.info('Preview URL added to PR body.');
+
+  destroy:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        background: true
+        with:
+          tofu_version: 1.8.2
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        background: true
+        with:
+          role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set preview identifier
+        id: preview
+        background: true
+        run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for backgrounds
+        wait-all:
+
+      - name: OpenTofu init
+        working-directory: ${{ env.TOFU_DIR }}
+        env:
+          PULL_NUMBER: ${{ steps.preview.outputs.name }}
+        run: |
+          cat > preview.backend.hcl << EOF
+          key = "workout-tracker/${PULL_NUMBER}/terraform.tfstate"
+          EOF
+
+          tofu init -backend-config=preview.backend.hcl
+
+      - name: Destroy preview infra
+        working-directory: ${{ env.TOFU_DIR }}
+        run: |
+          tofu destroy -auto-approve \
+            -var="aws_region=${AWS_REGION}" \
+            -var="project_name=${PROJECT_NAME}" \
+            -var="environment=${ENVIRONMENT}" \
+            -var="branch_name=pr-${{ github.event.pull_request.number }}"

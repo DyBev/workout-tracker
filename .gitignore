@@ -48,3 +48,5 @@ functions/tmp/
 .aws-sam/
 samconfig.toml
 build/*
+/infra/.terraform
+/.env
