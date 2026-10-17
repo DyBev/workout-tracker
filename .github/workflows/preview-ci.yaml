@@ -17,15 +17,17 @@ concurrency:
 env:
   PROJECT_NAME: workout-tracker
   ENVIRONMENT: dev
-  TOFU_DIR: infra
+  TOFU_DIR: infra/preview
 
 jobs:
   deploy:
+    environment: pr-preview
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
+        background: true
         uses: actions/checkout@v4
 
       - name: Setup Bun
@@ -53,6 +55,22 @@ jobs:
         background: true
         run: bun install
 
+      - name: Setup OpenTofu
+        background: true
+        uses: opentofu/setup-opentofu@v1
+
+      - name: Configure AWS credentials (OIDC)
+        background: true
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set preview identifier
+        background: true
+        id: preview
+        run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
       - name: Wait for install
         wait-all:
 
@@ -69,19 +87,6 @@ jobs:
         id: build-save-workout
         background: true
         run: make save-workout
-
-      - name: Setup OpenTofu
-        uses: opentofu/setup-opentofu@v1
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Set preview identifier
-        id: preview
-        run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
 
       - name: Wait for backgrounds
         wait-all:
@@ -163,52 +168,46 @@ jobs:
 
             core.info('Preview URL added to PR body.');
 
-  # test:
-  #   if: github.event.action != 'closed'
-  #   needs: [ "deploy" ]
-  #   runs-on: ubuntu-latest
-  #
-  #   steps:
-  #     - name: Setup Node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20
-  #
-  #     - name: Install deps
-  #       run: npm ci
-  #
-  #     - name: Install Playwright
-  #       run: npx playwright install --with-deps
-  #
-  #     - name: Run smoke tests
-  #       env:
-  #         BASE_URL: https://${{ steps.outputs.outputs.cloudfront_domain }}
-  #       run: |
-  #         echo "Testing ${BASE_URL}"
-  #         npx playwright test --grep @smoke
-
   destroy:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
+        background: true
         uses: actions/checkout@v4
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
+        background: true
         with:
           tofu_version: 1.8.2
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
+        background: true
         with:
           role-to-assume: ${{ secrets.AWS_WORKOUT_TRACKER_PREVIEW_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set preview identifier
+        id: preview
+        background: true
+        run: echo "name=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for backgrounds
+        wait-all:
+
       - name: OpenTofu init
         working-directory: ${{ env.TOFU_DIR }}
-        run: tofu init
+        env:
+          PULL_NUMBER: ${{ steps.preview.outputs.name }}
+        run: |
+          cat > preview.backend.hcl << EOF
+          key = "workout-tracker/${PULL_NUMBER}/terraform.tfstate"
+          EOF
+
+          tofu init -backend-config=preview.backend.hcl
 
       - name: Destroy preview infra
         working-directory: ${{ env.TOFU_DIR }}
