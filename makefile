@@ -36,7 +36,7 @@ $(shell find $(CMD_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;):
 		-trimpath \
 		-buildvcs=false \
 		-ldflags="-buildid=" \
-		-o bootstrap \
+		-o $(BUILD_DIR)/$$FUNCTION/bootstrap \
 		"$(CMD_DIR)/$$FUNCTION" \
 	&& chmod +x "$(BUILD_DIR)/$$FUNCTION/bootstrap" \
 	&& (cd "$(BUILD_DIR)/$$FUNCTION" && zip -r "../$$FUNCTION.zip" bootstrap > /dev/null) \
