@@ -49,7 +49,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 }
 
 resource "aws_lambda_function" "functions" {
-  for_each = var.lambdas
+  for_each = local.lambdas
 
   function_name = "${var.project_name}-preview-${var.environment}-${var.branch_slug}-${each.key}"
   role          = aws_iam_role.lambda.arn
@@ -57,7 +57,7 @@ resource "aws_lambda_function" "functions" {
   runtime       = "provided.al2023"
 
   filename         = each.value.zip_path
-  source_code_hash = filebase64sha256(each.value.zip_path)
+  source_code_hash = filebase64sha256(each.value.binary_path)
 
   architectures = [ "arm64" ]
   memory_size = 1024

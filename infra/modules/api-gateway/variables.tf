@@ -24,6 +24,7 @@ variable "functions_list" {
   type = map(object({
     api_method = string
     api_path = string
+    authentication = bool
   }))
 }
 

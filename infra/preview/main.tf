@@ -88,6 +88,7 @@ module "dynamo" {
 
 module "lambda" {
   source = "../modules/lambda"
+  source_path_relative = "../.."
   tags = local.common_tags
   table_name = local.table_name
   environment = var.environment

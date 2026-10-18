@@ -1,5 +1,5 @@
 output "lambdas" {
-  value = var.lambdas
+  value = local.lambda_configs
 }
 
 output "aws_lambdas" {
