@@ -77,15 +77,10 @@ jobs:
         background: true
         run: bun run build:web
 
-      - name: Build Lambda read-workout
-        id: build-read-workout
+      - name: Build Lambdas
+        id: build-lambdas
         background: true
-        run: make read-workout
-
-      - name: Build Lambda save-workout
-        id: build-save-workout
-        background: true
-        run: make save-workout
+        uses: ./.github/acitons/build-lambdas.yaml
 
       - name: Wait for backgrounds
         wait-all:
