@@ -80,7 +80,7 @@ jobs:
       - name: Build Lambdas
         id: build-lambdas
         background: true
-        uses: ./.github/acitons/build-lambdas
+        uses: ./.github/actions/build-lambdas
 
       - name: Wait for backgrounds
         wait-all:
