@@ -4,37 +4,37 @@ runs:
   using: "composite"
   steps:
     - name: Build Lambda read-workout
-      shell: zsh
+      shell: bash
       id: build-read-workout
       run: make read-workout
 
     - name: Build Lambda save-workout
-      shell: zsh
+      shell: bash
       id: build-save-workout
       run: make save-workout
 
     - name: Build Lambda exercises-read
-      shell: zsh
+      shell: bash
       id: build-exercises-read
       run: make exercises-read
 
     - name: Build Lambda exercises-save
-      shell: zsh
+      shell: bash
       id: build-exercises-save
       run: make exercises-save
 
     - name: Build Lambda exercises-archive
-      shell: zsh
+      shell: bash
       id: build-exercises-archive
       run: make exercises-archive
 
     - name: Build Lambda register-interest
-      shell: zsh
+      shell: bash
       id: build-register-interest
       run: make register-interest
 
     - name: Build Lambda update-body-weight
-      shell: zsh
+      shell: bash
       id: build-update-body-weight
       run: make update-body-weight
 
