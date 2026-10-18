@@ -39,8 +39,8 @@ resource "aws_apigatewayv2_route" "routes" {
   route_key = "${var.functions_list[each.key].api_method} ${var.functions_list[each.key].api_path}"
   target    = "integrations/${each.value.id}"
 
-  authorization_type = "JWT"
-  authorizer_id = aws_apigatewayv2_authorizer.authoriser.id
+  authorization_type = var.functions_list[each.key].authentication ? "JWT" : "NONE"
+  authorizer_id      = var.functions_list[each.key].authentication ? aws_apigatewayv2_authorizer.authoriser.id : null
 }
 
 resource "aws_apigatewayv2_stage" "default" {

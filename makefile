@@ -32,7 +32,12 @@ $(shell find $(CMD_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;):
 	fi \
 	&& echo "🚀 Building $$FUNCTION..." \
 	&& mkdir -p "$(BUILD_DIR)/$$FUNCTION" \
-	&& CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(GO_BUILD_FLAGS) -o "$(BUILD_DIR)/$$FUNCTION/bootstrap" "$(CMD_DIR)/$$FUNCTION" \
+	&& CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build \
+		-trimpath \
+		-buildvcs=false \
+		-ldflags="-buildid=" \
+		-o bootstrap \
+		"$(CMD_DIR)/$$FUNCTION" \
 	&& chmod +x "$(BUILD_DIR)/$$FUNCTION/bootstrap" \
 	&& (cd "$(BUILD_DIR)/$$FUNCTION" && zip -r "../$$FUNCTION.zip" bootstrap > /dev/null) \
 	&& echo "✅ Build complete: $(BUILD_DIR)/$$FUNCTION.zip"
