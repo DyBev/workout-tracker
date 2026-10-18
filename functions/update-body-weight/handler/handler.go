@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"context"
@@ -58,7 +58,7 @@ func (h *Handler) HandleRequest(
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
 		userID, ok = claims.(map[string]any)["sub"].(string)
-		if !ok {
+		if !ok || userID == "" {
 			return response(http.StatusUnauthorized, errorBody("not authorised")), nil
 		}
 	} else {
@@ -72,7 +72,7 @@ func (h *Handler) HandleRequest(
 
 	err = h.updateBodyWeight(ctx, userID, workoutID, bodyWeight)
 	if err != nil {
-		return response(http.StatusInternalServerError, errorBody("failed to save workouts")), err
+		return response(http.StatusInternalServerError, errorBody("failed to save workouts")), nil
 	}
 
 	return response(204, map[string]any{}), nil
@@ -98,6 +98,7 @@ func (h *Handler) updateBodyWeight(
 			":workoutID": &types.AttributeValueMemberS{ Value: workoutID },
 		},
 	})
+
 	if err != nil {
 		return err
 	}
@@ -144,8 +145,9 @@ func parseAndValidateBody(body string) (string, float32, error) {
 
 	var value RequestBody
 	if err := json.Unmarshal([]byte(trimmed), &value); err != nil {
-		return "", 0, fmt.Errorf("invalid JSON: %w", err)
+		return "", 0, fmt.Errorf("invalid JSON")
 	}
+
 	if err := validate(value); err != nil {
 		return "", 0, errors.New("invalid request body")
 	}
