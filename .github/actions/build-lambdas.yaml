@@ -1,0 +1,43 @@
+name: 'Build Lambdas'
+description: 'Build the lambda functions'
+runs:
+  using: "composite"
+  steps:
+    - name: Build Lambda read-workout
+      id: build-read-workout
+      background: true
+      run: make read-workout
+
+    - name: Build Lambda save-workout
+      id: build-save-workout
+      background: true
+      run: make save-workout
+
+    - name: Build Lambda exercises-read
+      id: build-exercises-read
+      background: true
+      run: make exercises-read
+
+    - name: Build Lambda exercises-save
+      id: build-exercises-save
+      background: true
+      run: make exercises-save
+
+    - name: Build Lambda exercises-archive
+      id: build-exercises-archive
+      background: true
+      run: make exercises-archive
+
+    - name: Build Lambda register-interest
+      id: build-register-interest
+      background: true
+      run: make register-interest
+
+    - name: Build Lambda update-body-weight
+      id: build-update-body-weight
+      background: true
+      run: make update-body-weight
+
+    - name: Wait for backgrounds
+      wait-all:
+
