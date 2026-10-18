@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+
+	"dybev.uk/workout-tracker/functions/update-body-weight/handler"
 )
 
 func main() {
@@ -19,7 +21,7 @@ func main() {
 	}
 
 	client := dynamodb.NewFromConfig(cfg)
-	h := NewHandler(client, tableName)
+	h := handler.NewHandler(client, tableName)
 
 	lambda.Start(h.HandleRequest)
 }
