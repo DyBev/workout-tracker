@@ -43,10 +43,16 @@ android/
 # Go
 functions/bin/
 functions/tmp/
+/*.out
 
 # AWS SAM
 .aws-sam/
 samconfig.toml
 build/*
-/infra/.terraform
+/infra/*/.terraform
+/infra/*/*.out
+/infra/*/*.hcl
 /.env
+
+# AI stuff
+/tmp
