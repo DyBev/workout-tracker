@@ -9,3 +9,7 @@ output "domain_name" {
 output "id" {
   value = aws_cloudfront_distribution.web.id
 }
+
+output "hosted_zone_id" {
+  value = aws_cloudfront_distribution.web.hosted_zone_id
+}

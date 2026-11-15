@@ -7,4 +7,6 @@ variable "s3_bucket_regional_domain_name" { }
 variable "s3_id" { }
 variable "gateway_api_endpoint" { }
 variable "tags" { }
+variable "aliases" { type = list(string) }
+variable "domain_certificate_arn" { type = string }
 
