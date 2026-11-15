@@ -1,6 +1,11 @@
-# workout-tracker
+# Workout Tracker
 
-this is going to be a web-app to allow me to track my workouts
+1. [Roadmap](#roadmap)
+2. [Ideas](#ideas)
+3. [Architecture](#architecture)
+4. [Data Design](#data-design)
+5. [Self Hosting](#self-hosting)
+6. [Notes](#notes-and-other-thoughts-to-keep-in-mind)
 
 # Roadmap
 
@@ -24,51 +29,17 @@ b. I want users to be able to experience the app before needing to pay so will n
     - users can only save 3 workouts
     - The freemium limits are enforced via **atomic counters** on the `UserProfiles` table (`workoutsRecorded` and `savedTemplateCount`). These are incremented atomically on each write, so no extra read is needed to check the limit before allowing a write.
 
-## Ideas
+# Ideas
+
 1. Trainer integration
-a. allow trainers to share created workouts with their clients without clients needing to create their own workout.
-b. allow clients to share their completed workouts with their trainers meaning trainers can see the progress of their client over the long term allowing them to adjust the training schedule based on the progress of their client.
-c. Note: cross-user queries (e.g. a trainer viewing all of a client's workouts) will be easier to implement after migrating to a relational database where joins and secondary indexes are more natural.
+- allow trainers to share created workouts with their clients without clients needing to create their own workout.
+- allow clients to share their completed workouts with their trainers meaning trainers can see the progress of their client over the long term allowing them to adjust the training schedule based on the progress of their client.
+_Note: cross-user queries (e.g. a trainer viewing all of a client's workouts) will be easier to implement after migrating to a relational database where joins and secondary indexes are more natural._
 
-### Sharing design within DynamoDB
+2. Progress chart
+- Chart the weight / rep progress of a given exercise
 
-Two approaches are viable without leaving DynamoDB:
-
-**Option A — Copy-on-share (simplest)**
-
-When a trainer shares a template with a client, Lambda writes a copy of the template item directly into the client's own `SavedTemplates` partition (`PK=clientUserId`). The client's existing read path requires no changes — their templates all live under their own `userId` as normal.
-
-- ✅ Zero extra tables or GSIs
-- ✅ No change to existing read paths
-- ❌ Template changes made by the trainer after sharing do not propagate to clients (snapshot-in-time)
-
-Suitable for simple one-way "push a template to a client" flows where the trainer doesn't need to keep templates in sync.
-
-**Option B — SharedTemplates table with a GSI (live sharing)**
-
-Add a fourth table `SharedTemplates` that acts as a sharing ledger:
-
-| Table | PK | SK | GSI PK | GSI SK |
-|---|---|---|---|---|
-| `SharedTemplates` | `ownerId` | `SHARE#<recipientId>#<templateId>` | `recipientId` | `TEMPLATE#<templateId>` |
-
-The SK is ordered `SHARE#<recipientId>#<templateId>` so that a trainer can query `PK=ownerId, SK begins_with SHARE#<recipientId>` to list everything shared with a specific client in one range query, which is expected to be a common access pattern for trainer management UIs.
-
-- **Owner query** (`PK=ownerId`) — a trainer can fetch all templates they have shared and see which clients received each one.
-- **Recipient query** (GSI: `PK=recipientId`) — a client can fetch all templates shared with them in a single query without scanning the whole table.
-- The item stores a reference to the original `SavedTemplates` entry (`ownerId` + `templateId`), so Lambda fetches the live template in a second read, meaning updates made by the trainer are always reflected. When loading a client's full template list, Lambda can resolve multiple references in parallel using `BatchGetItem` to avoid N serial reads.
-
-A similar pattern works for clients sharing completed workouts with their trainer:
-
-| Table | PK | SK | GSI PK | GSI SK |
-|---|---|---|---|---|
-| `SharedWorkouts` | `clientId` | `SHARE#<trainerId>#<workoutId>` | `trainerId` | `WORKOUT#<workoutId>` |
-
-The trainer queries the GSI (`PK=trainerId`) to pull all workouts shared with them across all clients, and uses `BatchGetItem` against the `Workouts` table to resolve the full workout items.
-
-**Relationship management** — a `TrainerClients` table (or a `relationships` attribute on `UserProfiles`) can record which trainer–client pairs exist, so Lambda can enforce that sharing is only permitted between linked users before writing to `SharedTemplates`.
-
-# Architecture Diagram
+# Architecture
 ```mermaid
 architecture-beta
     group aws(cloud)[AWS]
@@ -88,7 +59,7 @@ architecture-beta
     apigw:L --> R:client
 ```
 
-# DynamoDB Document Design
+# Data Design
 
 Three tables are used, designed to minimise read/write operations and support the freemium model without extra reads:
 
@@ -103,6 +74,47 @@ Three tables are used, designed to minimise read/write operations and support th
 - **Atomic counters** — `workoutsRecorded` and `savedTemplateCount` on `UserProfiles` are incremented using DynamoDB atomic updates on each write, so the freemium limit check requires no extra read.
 - **Sort key pattern** — `WORKOUT#<timestamp>#<workoutId>` gives natural reverse-chronological ordering when querying a user's workout history.
 - **Future migration path** — because exercises and sets are stored inline, migrating to SQL involves decomposing each workout item into normalised relational tables (`workouts`, `exercises`, `sets`). The denormalised structure maps deterministically to these SQL rows, making the migration mechanical rather than a data-modelling redesign.
+
+# Self hosting
+
+There are terraform files available in the /infra folders, both files are available for both preview and production environments, if you wish to self host the app yourself you can do so on AWS.
+
+## BEFORE YOU CONTINUE
+
+**bare in mind that you will be deploying my code and it is your responsibility to ensure that I am not being a malicious actor, I personally, if asked, would discourage anyone from deploying or running any code they do not understand themselves, deploying and running this code you do so at your own risk**.
+
+## Steps to self hosting
+
+These are the steps required to self host
+
+### AWS IAM role configuration
+
+This is the auth requirements for the Github actions to auto create and auto deploy
+
+1. Create an IAM role with the following policies attached.
+[infra/state-policy](./infra/state-policy.md)
+[module/api-gateway](./infra/modules/api-gateway/policy.md)
+[module/cloudfront](./infra/modules/cloudfront/policy.md)
+[module/cognito](./infra/modules/cognito/policy.md)
+[module/dns](./infra/modules/dns/policy.md)
+[module/dynamodb](./infra/modules/dynamodb/policy.md)
+[module/lambda](./infra/modules/lambda/policy.md)
+[module/resource-group](./infra/modules/resource-group/policy.md)
+[module/s3](./infra/modules/s3/policy.md)
+
+[IAM role trust policy](./infra/trust-policy.md)
+
+2. Clone this repository to your own github account
+
+3. Add necessary secrets to your github actions secrets
+
+required:
+`AWS_WORKOUT_TRACKER_CI_ROLE`: The AWS IAM role that you set up in step 1
+
+optional:
+`AWS_REGION`: The AWS region that you'd like to deploy to (defaults to `eu-west-2` which is London)
+`DOMAIN_CERTIFICATE_ARN`: The AWS ARN for the certificate for your domain
+`ROUTE53_ZONE_ID`: The ZoneID for the route53 hosted zone for you domain
 
 # Notes and other thoughts to keep in mind
 - **Cost efficiency** — at low usage, DynamoDB on-demand + Lambda free tier + Cognito free tier means the app runs for effectively $0/mo, making it ideal for the early stages of the project.

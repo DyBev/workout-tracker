@@ -29,16 +29,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-import {
-  to = module.cognito.aws_cognito_user_pool.this
-  id = "eu-west-2_J3CkARqa9"
-}
-
-import {
-  to = module.cognito.aws_cognito_user_pool_client.workout_tracker
-  id = "eu-west-2_J3CkARqa9/17h9vie6rgtvjm9cdblu94j2rl"
-}
-
 variable "aws_region" {
   description = "AWS region for S3 and supporting resources."
   type        = string
@@ -85,6 +75,13 @@ locals {
       ManagedBy   = "OpenTofu"
     },
     var.tags
+  )
+
+  use_domain = (
+    var.route53_zone_id != null &&
+    var.route53_zone_id != "" &&
+    var.domain_certificate_arn != null &&
+    var.domain_certificate_arn != ""
   )
 }
 
@@ -144,6 +141,7 @@ module "cloudfront" {
   aliases = [
     "workout.dybev.uk"
   ]
+  use_domain = local.use_domain
   domain_certificate_arn = var.domain_certificate_arn
 }
 
@@ -156,6 +154,7 @@ module "s3" {
 
 module "dns" {
   source = "../modules/dns"
+  count = local.use_domain ? 1 : 0
   cloudfront_zone_id = module.cloudfront.hosted_zone_id
   cloudfront_domain_name = module.cloudfront.domain_name
   zone_id = var.route53_zone_id
