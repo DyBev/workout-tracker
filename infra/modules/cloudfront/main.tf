@@ -11,6 +11,9 @@ resource "aws_cloudfront_distribution" "web" {
   comment             = "${var.project_name} ${var.environment} ${var.branch_name}"
   default_root_object = "index.html"
 
+  aliases = var.aliases
+
+
   origin {
     domain_name              = var.s3_bucket_regional_domain_name
     origin_id                = "s3-${var.s3_id}"
@@ -75,7 +78,8 @@ resource "aws_cloudfront_distribution" "web" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn = var.domain_certificate_arn
+    ssl_support_method = "sni-only"
   }
 
   tags = var.tags

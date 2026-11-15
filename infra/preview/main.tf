@@ -20,6 +20,16 @@ provider "aws" {
   region = var.aws_region
 }
 
+import {
+  to = module.cognito.aws_cognito_user_pool.this
+  id = "eu-west-2_J3CkARqa9"
+}
+
+import {
+  to = module.cognito.aws_cognito_user_pool_client.workout_tracker
+  id = "eu-west-2_J3CkARqa9/17h9vie6rgtvjm9cdblu94j2rl"
+}
+
 variable "aws_region" {
   description = "AWS region for S3 and supporting resources."
   type        = string
@@ -47,6 +57,14 @@ variable "tags" {
   description = "Extra tags"
   type        = map(string)
   default     = {}
+}
+
+variable "route53_zone_id" {
+  type = string
+}
+
+variable "domain_certificate_arn" {
+  type = string
 }
 
 data "aws_caller_identity" "current" {}
@@ -121,6 +139,10 @@ module "cloudfront" {
   gateway_api_endpoint = module.gateway.api_endpoint
   s3_id = module.s3.id
   s3_bucket_regional_domain_name = module.s3.bucket_regional_domain_name
+  aliases = [
+    "workout-${local.branch_slug}.dybev.uk"
+  ]
+  domain_certificate_arn = var.domain_certificate_arn
 }
 
 module "s3" {
@@ -128,4 +150,20 @@ module "s3" {
   bucket_name = local.bucket_name
   tags = local.common_tags
   aws_cloudfront_distribution_arn = module.cloudfront.arn
+}
+
+module "dns" {
+  source = "../modules/dns"
+  cloudfront_zone_id = module.cloudfront.hosted_zone_id
+  cloudfront_domain_name = module.cloudfront.domain_name
+  zone_id = var.route53_zone_id
+  record_name = "workout-${local.branch_slug}.dybev.uk"
+}
+
+module "dns" {
+  source = "../modules/dns"
+  cloudfront_zone_id = module.cloudfront.hosted_zone_id
+  cloudfront_domain_name = module.cloudfront.domain_name
+  zone_id = var.route53_zone_id
+  record_name = "workout.dybev.uk"
 }

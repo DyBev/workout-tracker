@@ -20,6 +20,10 @@ clean:
 	@rm -rf "$(BUILD_DIR)" *.zip
 	@echo "✅ Clean complete"
 
+web-deploy:
+	npm run build:web \
+	&& aws s3 sync packages/app/dist/ s3://workout-tracker-production-main
+
 # Usage: make build-myLambda
 .PHONY: $(shell find $(CMD_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
 $(shell find $(CMD_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \;):
