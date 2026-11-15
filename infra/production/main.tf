@@ -153,3 +153,11 @@ module "s3" {
   tags = local.common_tags
   aws_cloudfront_distribution_arn = module.cloudfront.arn
 }
+
+module "dns" {
+  source = "../modules/dns"
+  cloudfront_zone_id = module.cloudfront.hosted_zone_id
+  cloudfront_domain_name = module.cloudfront.domain_name
+  zone_id = var.route53_zone_id
+  record_name = "workout.dybev.uk"
+}

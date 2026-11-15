@@ -159,11 +159,3 @@ module "dns" {
   zone_id = var.route53_zone_id
   record_name = "workout-${local.branch_slug}.dybev.uk"
 }
-
-module "dns" {
-  source = "../modules/dns"
-  cloudfront_zone_id = module.cloudfront.hosted_zone_id
-  cloudfront_domain_name = module.cloudfront.domain_name
-  zone_id = var.route53_zone_id
-  record_name = "workout.dybev.uk"
-}
