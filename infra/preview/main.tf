@@ -31,7 +31,7 @@ import {
 }
 
 variable "aws_region" {
-  description = "AWS region for S3 and supporting resources."
+  description = "AWS region for the resources."
   type        = string
   default     = "eu-west-2"
 }
@@ -61,10 +61,12 @@ variable "tags" {
 
 variable "route53_zone_id" {
   type = string
+  default = ""
 }
 
 variable "domain_certificate_arn" {
   type = string
+  default = ""
 }
 
 data "aws_caller_identity" "current" {}
@@ -83,6 +85,13 @@ locals {
       ManagedBy   = "OpenTofu"
     },
     var.tags
+  )
+
+  use_domain = (
+    var.route53_zone_id != null &&
+    var.route53_zone_id != "" &&
+    var.domain_certificate_arn != null &&
+    var.domain_certificate_arn != ""
   )
 }
 
@@ -142,6 +151,7 @@ module "cloudfront" {
   aliases = [
     "workout-${local.branch_slug}.dybev.uk"
   ]
+  use_domain = local.use_domain
   domain_certificate_arn = var.domain_certificate_arn
 }
 
@@ -154,6 +164,7 @@ module "s3" {
 
 module "dns" {
   source = "../modules/dns"
+  count = local.use_domain ? 1 : 0
   cloudfront_zone_id = module.cloudfront.hosted_zone_id
   cloudfront_domain_name = module.cloudfront.domain_name
   zone_id = var.route53_zone_id

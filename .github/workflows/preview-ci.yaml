@@ -1,9 +1,15 @@
-name: PR Preview Environment
+name: PREV DEPLOY
+run-name: PREV DEPLOY PR:${{ github.event.pull_request.number }}
 
 on:
   pull_request:
-    branches: [main]
-    types: [opened, reopened, synchronize, closed]
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
 
 permissions:
   id-token: write
@@ -21,7 +27,7 @@ env:
 
 jobs:
   deploy:
-    environment: pr-preview
+    environment: prev
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
 
@@ -104,8 +110,8 @@ jobs:
             -var="project_name=${PROJECT_NAME}" \
             -var="environment=${ENVIRONMENT}" \
             -var="branch_name=${{ steps.preview.outputs.name }}" \
-            -var="route53_zone_id=${secrets.ROUTE53_ZONE_ID}" \
-            -var="certificate_arn=${secrets.DOMAIN_CERTIFICATE_ARN}"
+            -var="route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}" \
+            -var="certificate_arn=${{ secrets.DOMAIN_CERTIFICATE_ARN }}"
 
       - name: Capture infra outputs
         id: outputs
