@@ -80,7 +80,7 @@ jobs:
         working-directory: ${{ env.TOFU_DIR }}
         run: |
           cat > backend.hcl << EOF
-          key = "workout-tracker/main/terraform.tfstate"
+          key = "workout-tracker/production/terraform.tfstate"
           EOF
 
           tofu init -backend-config=backend.hcl
