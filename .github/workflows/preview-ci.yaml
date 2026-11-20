@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: pr-preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   PROJECT_NAME: workout-tracker
@@ -172,6 +172,7 @@ jobs:
 
   destroy:
     if: github.event.action == 'closed'
+    environment: prev
     runs-on: ubuntu-latest
 
     steps:

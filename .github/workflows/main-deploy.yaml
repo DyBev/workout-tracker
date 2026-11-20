@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: main-deployment
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   PROJECT_NAME: workout-tracker
