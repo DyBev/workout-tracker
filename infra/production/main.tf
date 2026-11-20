@@ -18,10 +18,12 @@ terraform {
 
 variable "route53_zone_id" {
   type = string
+  default = ""
 }
 
 variable "domain_certificate_arn" {
   type = string
+  default = ""
 }
 
 

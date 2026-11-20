@@ -20,16 +20,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-import {
-  to = module.cognito.aws_cognito_user_pool.this
-  id = "eu-west-2_J3CkARqa9"
-}
-
-import {
-  to = module.cognito.aws_cognito_user_pool_client.workout_tracker
-  id = "eu-west-2_J3CkARqa9/17h9vie6rgtvjm9cdblu94j2rl"
-}
-
 variable "aws_region" {
   description = "AWS region for the resources."
   type        = string
@@ -67,6 +57,26 @@ variable "route53_zone_id" {
 variable "domain_certificate_arn" {
   type = string
   default = ""
+}
+
+variable "cognito_user_pool_id" {
+  type = string
+  default = ""
+}
+
+import {
+  to = module.cognito.aws_cognito_user_pool.this
+  id = var.cognito_user_pool_id
+}
+
+variable "cognito_user_pool_app_id" {
+  type = string
+  default = ""
+}
+
+import {
+  to = module.cognito.aws_cognito_user_pool_client.workout_tracker
+  id = var.cognito_user_pool_app_id
 }
 
 data "aws_caller_identity" "current" {}
