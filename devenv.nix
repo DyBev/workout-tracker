@@ -1,46 +1,43 @@
 { pkgs, lib, config, inputs, ... }:
 
-{
-  # https://devenv.sh/basics/
-  env.GREET = "devenv";
+let
+  unstable = import
+    (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz")
+    {
+      inherit (pkgs) system;
+      config.allowUnfree = true;
+    };
+in {
+    packages = [
+        pkgs.git
+        pkgs.bun
+        pkgs.awscli2
+        unstable.opentofu
+    ];
 
-  # https://devenv.sh/packages/
-  packages = [ pkgs.git ];
+    dotenv.enable = true;
 
-  # https://devenv.sh/languages/
-  # languages.rust.enable = true;
+    languages.go.enable = true;
+    languages.go.lsp.enable = true;
 
-  # https://devenv.sh/processes/
-  # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
+    languages.typescript.enable = true;
+    languages.typescript.lsp.enable = true;
 
-  # https://devenv.sh/services/
-  # services.postgres.enable = true;
+    enterShell = ''
+        git --version
+        go mod tidy
+        bun install
+        tofu --version
+        aws --version
+    '';
 
-  # https://devenv.sh/scripts/
-  scripts.hello.exec = ''
-    echo hello from $GREET
-  '';
+    enterTest = ''
+        echo "Running tests"
+        git --version | grep --color=auto "${pkgs.git.version}"
+    '';
 
-  # https://devenv.sh/basics/
-  enterShell = ''
-    hello         # Run scripts directly
-    git --version # Use packages
-  '';
-
-  # https://devenv.sh/tasks/
-  # tasks = {
-  #   "myproj:setup".exec = "mytool build";
-  #   "devenv:enterShell".after = [ "myproj:setup" ];
-  # };
-
-  # https://devenv.sh/tests/
-  enterTest = ''
-    echo "Running tests"
-    git --version | grep --color=auto "${pkgs.git.version}"
-  '';
-
-  # https://devenv.sh/git-hooks/
-  # git-hooks.hooks.shellcheck.enable = true;
-
-  # See full reference at https://devenv.sh/reference/options/
+    processes = {
+        web-client.exec = "npm run web";
+        web-server.exec = "go run ./packages/server/main.go";
+    };
 }
